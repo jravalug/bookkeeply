@@ -2,8 +2,20 @@ from .business import Business
 from .client import Client
 from .sale import Sale, SaleDetail
 from .product import Product, ProductDetail
-from .inventory import InventoryItem
-from .account_classifier import ACAccount, ACSubAccount, ACElement
+from .inventory import (
+    Inventory,
+    InventoryItem,
+    Supply,
+    InventoryMovement,
+    InventoryWipBalance,
+)
+from .account_classifier import (
+    ACAccount,
+    ACSubAccount,
+    ACElement,
+    BusinessAccountAdoption,
+    BusinessAccountAdoptionAudit,
+)
 from .invoice import Invoice, InvoicePurchaseDetail, InvoiceServiceDetail
 from .daily_income import DailyIncome
 from .income_event import IncomeEvent

@@ -1,4 +1,5 @@
 from app.extensions import db
+from sqlalchemy import event, inspect
 
 
 class ACAccount(db.Model):
@@ -56,3 +57,95 @@ class ACElement(db.Model):
             name="unique_ac_element_code_per_ac_subaccount_code",
         ),
     )
+
+
+class BusinessAccountAdoption(db.Model):
+    __tablename__ = "business_account_adoption"
+
+    id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("business.id"),
+        nullable=False,
+        index=True,
+    )
+    account_id = db.Column(
+        db.Integer,
+        db.ForeignKey("ac_account.id"),
+        nullable=False,
+        index=True,
+    )
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    adopted_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+    removed_at = db.Column(db.DateTime, nullable=True)
+
+    business = db.relationship(
+        "Business",
+        foreign_keys=[business_id],
+        backref="adopted_accounts",
+    )
+    account = db.relationship(
+        "ACAccount",
+        foreign_keys=[account_id],
+        backref="adoptions",
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "business_id",
+            "account_id",
+            name="uq_business_account_adoption_business_account",
+        ),
+    )
+
+
+class BusinessAccountAdoptionAudit(db.Model):
+    __tablename__ = "business_account_adoption_audit"
+
+    id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("business.id"),
+        nullable=False,
+        index=True,
+    )
+    account_id = db.Column(
+        db.Integer,
+        db.ForeignKey("ac_account.id"),
+        nullable=False,
+        index=True,
+    )
+    action = db.Column(db.String(30), nullable=False, index=True)
+    actor = db.Column(db.String(120), nullable=True)
+    source = db.Column(db.String(50), nullable=True)
+    previous_is_active = db.Column(db.Boolean, nullable=True)
+    new_is_active = db.Column(db.Boolean, nullable=True)
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+
+    business = db.relationship(
+        "Business",
+        foreign_keys=[business_id],
+        backref="account_adoption_audits",
+    )
+    account = db.relationship(
+        "ACAccount",
+        foreign_keys=[account_id],
+        backref="adoption_audits",
+    )
+
+
+@event.listens_for(ACAccount, "before_update")
+def block_ac_account_normative_updates(mapper, connection, target):
+    state = inspect(target)
+    if state.attrs.code.history.has_changes() or state.attrs.name.history.has_changes():
+        raise ValueError(
+            "El nomenclador general es normativo y no permite editar codigo ni nombre de cuenta"
+        )

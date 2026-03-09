@@ -420,19 +420,19 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 
 ### Paquete de arranque (ejecucion inmediata)
 
-- [ ] TKT-INV-001 (`F1.3`): crear migracion de `insumos` con FK a negocio y referencia a surtido.
-- [ ] TKT-INV-002 (`F1.3`): crear modelo/servicio `insumos` y validaciones de pertenencia por negocio.
-- [ ] TKT-INV-003 (`F1.3`): exponer endpoints CRUD de `insumos` con filtros por negocio y pruebas basicas.
-- [ ] TKT-INV-004 (`F2.1`): crear tabla de movimientos tipificados con destino (`sales_floor`/`wip`) y referencia de origen.
-- [ ] TKT-INV-005 (`F2.1`): implementar servicio `inventory_movement_service` con regla de no-negativos e idempotencia base.
-- [ ] TKT-INV-006 (`F2.1`): agregar consulta de movimientos por item/negocio/rango y prueba de regresion.
-- [ ] TKT-INV-007 (`F4.1`): crear tabla `inventory_wip_balance` y estados minimos de ciclo (`abierto`, `cerrado`, `merma`).
-- [ ] TKT-INV-008 (`F4.1`): implementar transiciones `inventory -> wip -> finished_goods` con validaciones de saldo.
-- [ ] TKT-INV-009 (`F4.1`): cubrir caso de consumo parcial y merma de remanente con pruebas de servicio.
-- [ ] TKT-INV-010 (`F13.2`): modelar adopcion de cuentas por negocio reutilizando `ACAccount` (sin duplicar nomenclador).
-- [ ] TKT-INV-011 (`F13.2`): bloquear edicion de `codigo`/`nombre` en cuentas normativas y validar en API.
-- [ ] TKT-INV-012 (`F13.2`): exponer flujo `adoptar/desadoptar` cuenta por negocio con auditoria minima.
-- [ ] TKT-INV-013 (`F13.2`): restringir operaciones contables a cuentas adoptadas y cubrir casos de rechazo.
+- [x] TKT-INV-001 (`F1.3`): crear migracion de `supplies` con FK a negocio y referencia a surtido.
+- [x] TKT-INV-002 (`F1.3`): crear modelo/servicio `Supply` y validaciones de pertenencia por negocio.
+- [x] TKT-INV-003 (`F1.3`): exponer endpoints CRUD de `supplies` con filtros por negocio y pruebas basicas.
+- [x] TKT-INV-004 (`F2.1`): crear tabla de movimientos tipificados con destino (`sales_floor`/`wip`) y referencia de origen.
+- [x] TKT-INV-005 (`F2.1`): implementar servicio de movimientos con regla de no-negativos e idempotencia base.
+- [x] TKT-INV-006 (`F2.1`): agregar consulta de movimientos por item/negocio/rango y prueba de regresion.
+- [x] TKT-INV-007 (`F4.1`): crear tabla `inventory_wip_balance` y estados minimos de ciclo (`abierto`, `cerrado`, `merma`).
+- [x] TKT-INV-008 (`F4.1`): implementar transiciones `inventory -> wip -> finished_goods` con validaciones de saldo.
+- [x] TKT-INV-009 (`F4.1`): cubrir caso de consumo parcial y merma de remanente con pruebas de servicio.
+- [x] TKT-INV-010 (`F13.2`): modelar adopcion de cuentas por negocio reutilizando `ACAccount` (sin duplicar nomenclador).
+- [x] TKT-INV-011 (`F13.2`): bloquear edicion de `codigo`/`nombre` en cuentas normativas y validar en API.
+- [x] TKT-INV-012 (`F13.2`): exponer flujo `adoptar/desadoptar` cuenta por negocio con auditoria minima.
+- [x] TKT-INV-013 (`F13.2`): restringir operaciones contables a cuentas adoptadas y cubrir casos de rechazo.
 
 ### Definition of Done (arranque)
 
@@ -471,3 +471,15 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 - 2026-03-09: Se valida reutilizar `ACAccount/ACSubAccount/ACElement` y se fija que cada negocio adopta cuentas del nomenclador general para operar; se audita adopcion/desadopcion y asociaciones cuenta-subcuenta.
 - 2026-03-09: Se agregan criterios de aceptacion tecnicos (DB/API/UI/Auditoria/Pruebas) para garantizar que el nomenclador general sea inmutable y que la operacion ocurra solo sobre cuentas adoptadas por negocio.
 - 2026-03-09: Se define paquete de arranque con tickets tecnicos ejecutables (`TKT-INV-001` a `TKT-INV-013`) para iniciar implementacion por capas en `F1.3`, `F2.1`, `F4.1` y `F13.2`.
+- 2026-03-09: Se implementan `Supply` y `InventoryMovement` en modelos/servicios/rutas (`/supply/list`, `/supply/create`, `/movement/list`, `/movement/create`) con convencion de codigo en ingles y mensajes/API en espanol.
+- 2026-03-09: Se agrega migracion de compatibilidad para renombrar `insumo` -> `supply` en bases existentes y mantener continuidad de despliegues.
+- 2026-03-09: Se completan endpoints `Supply` para `update/delete` y se agrega filtro por rango de fechas en `/movement/list` (`start_date`, `end_date`) con validacion de formato.
+- 2026-03-09: Se implementa `InventoryWipBalance` (modelo + migracion), junto a endpoints/servicio WIP (`/wip/list`, `/wip/create`, `/wip/<id>/consume`, `/wip/<id>/finish`, `/wip/<id>/waste`) para abrir `F4.1` con consumo parcial y merma operativa.
+- 2026-03-09: Se implementa adopcion de cuentas por negocio sobre nomenclador general (`BusinessAccountAdoption`) con migracion y API (`/account-adoption/list`, `/account-adoption/adopt`, `/account-adoption/unadopt`).
+- 2026-03-09: Se blinda inmutabilidad del nomenclador general con guard de modelo (`before_update` en `ACAccount`) y rechazo API explicito de edicion (`/account-catalog/update`), manteniendo consulta de catalogo en solo lectura (`/account-catalog/list`).
+- 2026-03-09: Se implementa auditoria de adopcion/desadopcion con `BusinessAccountAdoptionAudit` y endpoint de consulta (`/account-adoption/audit-list`), registrando actor, origen y cambio de estado.
+- 2026-03-09: Se agrega `account_code` en `InventoryMovement` para operacion contable controlada y se valida adopcion activa por negocio; se bloquea desadopcion cuando la cuenta tiene movimientos asociados.
+- 2026-03-09: Se hace obligatorio `account_code` adoptado para registrar movimientos (`/movement/create`) y para transferencias a WIP (`/wip/create`), reforzando rechazo de operaciones contables fuera de cuentas adoptadas.
+- 2026-03-09: Se completa el cierre contable `wip -> finished_goods` en `/wip/<id>/finish`, registrando movimiento `wip_close` con `account_code` adoptado obligatorio y referencia al balance WIP cerrado.
+- 2026-03-09: Se agregan pruebas de servicio en `tests/services/test_inventory_service.py` y pasan en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`): consumo parcial WIP, merma WIP, cierre WIP con `wip_close` y filtro de movimientos por item/rango.
+- 2026-03-09: Se agregan pruebas de rutas para CRUD de `supplies` en `tests/routes/test_inventory_supply_routes.py` (list/create/update/delete) y pasan en `webdev` junto a pruebas de servicio (`8 tests OK`).

@@ -72,3 +72,163 @@ class InventoryItem(db.Model):
 
     # Relación con ProductDetail
     products = db.relationship("ProductDetail", back_populates="raw_material")
+
+
+class Supply(db.Model):
+    __tablename__ = "supply"
+
+    id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("business.id"),
+        nullable=False,
+        index=True,
+    )
+    inventory_item_id = db.Column(
+        db.Integer,
+        db.ForeignKey("inventory_item.id"),
+        nullable=False,
+        index=True,
+    )
+    product_surtido = db.Column(db.String(120), nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp(),
+    )
+
+    business = db.relationship(
+        "Business", foreign_keys=[business_id], backref="supplies"
+    )
+    inventory_item = db.relationship(
+        "InventoryItem",
+        foreign_keys=[inventory_item_id],
+        backref="supply_links",
+    )
+
+
+class InventoryMovement(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("business.id"),
+        nullable=False,
+        index=True,
+    )
+    inventory_item_id = db.Column(
+        db.Integer,
+        db.ForeignKey("inventory_item.id"),
+        nullable=False,
+        index=True,
+    )
+    inventory_id = db.Column(
+        db.Integer,
+        db.ForeignKey("inventory.id"),
+        nullable=True,
+        index=True,
+    )
+    movement_type = db.Column(db.String(30), nullable=False, index=True)
+    destination = db.Column(db.String(30), nullable=True, index=True)
+    quantity = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(20), nullable=False)
+    unit_cost = db.Column(db.Float, nullable=True)
+    total_cost = db.Column(db.Float, nullable=True)
+    account_code = db.Column(db.String(20), nullable=True, index=True)
+    idempotency_key = db.Column(db.String(120), nullable=True, unique=True)
+    reference_type = db.Column(db.String(40), nullable=True)
+    reference_id = db.Column(db.Integer, nullable=True)
+    document = db.Column(db.String(80), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    movement_date = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+
+    business = db.relationship(
+        "Business",
+        foreign_keys=[business_id],
+        backref="inventory_movements",
+    )
+    inventory_item = db.relationship(
+        "InventoryItem",
+        foreign_keys=[inventory_item_id],
+        backref="movements",
+    )
+    inventory = db.relationship(
+        "Inventory",
+        foreign_keys=[inventory_id],
+        backref="movements",
+    )
+
+
+class InventoryWipBalance(db.Model):
+    __tablename__ = "inventory_wip_balance"
+
+    STATUS_OPEN = "open"
+    STATUS_FINISHED = "finished"
+    STATUS_WASTE = "waste"
+
+    id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("business.id"),
+        nullable=False,
+        index=True,
+    )
+    inventory_item_id = db.Column(
+        db.Integer,
+        db.ForeignKey("inventory_item.id"),
+        nullable=False,
+        index=True,
+    )
+    source_inventory_id = db.Column(
+        db.Integer,
+        db.ForeignKey("inventory.id"),
+        nullable=True,
+        index=True,
+    )
+    quantity = db.Column(db.Float, nullable=False)
+    remaining_quantity = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(20), nullable=False)
+    status = db.Column(db.String(20), nullable=False, index=True)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp(),
+    )
+
+    business = db.relationship(
+        "Business",
+        foreign_keys=[business_id],
+        backref="inventory_wip_balances",
+    )
+    inventory_item = db.relationship(
+        "InventoryItem",
+        foreign_keys=[inventory_item_id],
+        backref="wip_balances",
+    )
+    source_inventory = db.relationship(
+        "Inventory",
+        foreign_keys=[source_inventory_id],
+        backref="wip_balances",
+    )
