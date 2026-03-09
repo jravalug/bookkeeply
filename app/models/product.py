@@ -74,6 +74,22 @@ class Product(db.Model):
         comment="Número de raciones o unidades por lote.",
     )
 
+    # === Reglas de inventario/WIP ===
+    can_be_subproduct = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default=db.false(),
+        comment="Permite tratar el producto terminado como subproducto en WIP.",
+    )
+    goes_to_sales_floor = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default=db.false(),
+        comment="Si es true, la produccion terminada va directo a exposicion.",
+    )
+
     # === Relaciones ===
     # ID del negocio al que pertenece el producto.
     business_id = db.Column(

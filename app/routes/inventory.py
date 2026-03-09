@@ -65,6 +65,71 @@ def item_update(client_slug, business_slug, inventory_item_id):
     )
 
 
+@bp.route("/accounting/manage", methods=["GET", "POST"])
+def accounting_manage(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return redirect(url_for("client.list_clients"))
+
+    if request.method == "POST":
+        action = (request.form.get("action") or "").strip().lower()
+        account_code = (request.form.get("account_code") or "").strip()
+        actor = (request.form.get("actor") or "ui_user").strip()
+
+        try:
+            if action == "adopt":
+                inventory_service.adopt_account_by_code(
+                    business_id=business.id,
+                    account_code=account_code,
+                    actor=actor,
+                    source="inventory_ui",
+                )
+                flash("Cuenta adoptada correctamente", "success")
+            elif action == "unadopt":
+                inventory_service.unadopt_account_by_code(
+                    business_id=business.id,
+                    account_code=account_code,
+                    actor=actor,
+                    source="inventory_ui",
+                )
+                flash("Cuenta desadoptada correctamente", "success")
+            else:
+                flash("Accion no valida", "warning")
+        except ValueError as exc:
+            flash(str(exc), "danger")
+
+        return redirect(
+            url_for(
+                "inventory.accounting_manage",
+                client_slug=business.client.slug,
+                business_slug=business.slug,
+            )
+        )
+
+    accounts = inventory_service.list_catalog_accounts()
+    adoptions = inventory_service.list_account_adoptions(
+        business_id=business.id,
+        include_inactive=True,
+    )
+    adopted_by_code = {
+        adoption.account.code: adoption
+        for adoption in adoptions
+        if adoption.account and adoption.is_active
+    }
+    audits = inventory_service.list_account_adoption_audits(business_id=business.id)[
+        :30
+    ]
+
+    return render_template(
+        "inventory/accounting_manage.html",
+        business=business,
+        accounts=accounts,
+        adopted_by_code=adopted_by_code,
+        audits=audits,
+    )
+
+
 @bp.route("/supply/list", methods=["GET"])
 def supply_list(client_slug, business_slug):
     try:
@@ -640,10 +705,13 @@ def wip_list(client_slug, business_slug):
                     "id": balance.id,
                     "business_id": balance.business_id,
                     "inventory_item_id": balance.inventory_item_id,
+                    "produced_product_id": balance.produced_product_id,
                     "quantity": balance.quantity,
                     "remaining_quantity": balance.remaining_quantity,
                     "unit": balance.unit,
                     "status": balance.status,
+                    "can_be_subproduct": balance.can_be_subproduct,
+                    "finished_location": balance.finished_location,
                     "notes": balance.notes,
                 }
                 for balance in balances
@@ -674,6 +742,8 @@ def wip_create(client_slug, business_slug):
                 if source_inventory_id not in (None, "")
                 else None
             ),
+            can_be_subproduct=str(payload.get("can_be_subproduct", "false")).lower()
+            == "true",
             notes=payload.get("notes"),
         )
     except (TypeError, ValueError) as exc:
@@ -690,6 +760,8 @@ def wip_create(client_slug, business_slug):
                     "remaining_quantity": balance.remaining_quantity,
                     "unit": balance.unit,
                     "status": balance.status,
+                    "can_be_subproduct": balance.can_be_subproduct,
+                    "finished_location": balance.finished_location,
                 },
             }
         ),
@@ -739,6 +811,11 @@ def wip_finish(client_slug, business_slug, wip_balance_id):
             business_id=business.id,
             wip_balance_id=wip_balance_id,
             account_code=payload.get("account_code"),
+            produced_product_id=(
+                int(payload.get("produced_product_id"))
+                if payload.get("produced_product_id") not in (None, "")
+                else None
+            ),
             notes=payload.get("notes"),
         )
     except ValueError as exc:
@@ -751,6 +828,69 @@ def wip_finish(client_slug, business_slug, wip_balance_id):
                 "id": balance.id,
                 "remaining_quantity": balance.remaining_quantity,
                 "status": balance.status,
+                "produced_product_id": balance.produced_product_id,
+                "can_be_subproduct": balance.can_be_subproduct,
+                "finished_location": balance.finished_location,
+            },
+        }
+    )
+
+
+@bp.route("/wip/<int:wip_balance_id>/mark-subproduct", methods=["POST"])
+def wip_mark_subproduct(client_slug, business_slug, wip_balance_id):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    payload = request.get_json(silent=True) or request.form
+    try:
+        balance = inventory_service.mark_wip_as_subproduct(
+            business_id=business.id,
+            wip_balance_id=wip_balance_id,
+            can_be_subproduct=str(payload.get("can_be_subproduct", "true")).lower()
+            == "true",
+        )
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return jsonify(
+        {
+            "ok": True,
+            "item": {
+                "id": balance.id,
+                "can_be_subproduct": balance.can_be_subproduct,
+                "status": balance.status,
+            },
+        }
+    )
+
+
+@bp.route("/wip/<int:wip_balance_id>/consume-subproduct", methods=["POST"])
+def wip_consume_subproduct(client_slug, business_slug, wip_balance_id):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    payload = request.get_json(silent=True) or request.form
+    try:
+        balance = inventory_service.consume_wip_subproduct_for_recipe(
+            business_id=business.id,
+            wip_balance_id=wip_balance_id,
+            consumed_quantity=float(payload.get("consumed_quantity", 0)),
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return jsonify(
+        {
+            "ok": True,
+            "item": {
+                "id": balance.id,
+                "remaining_quantity": balance.remaining_quantity,
+                "status": balance.status,
+                "can_be_subproduct": balance.can_be_subproduct,
             },
         }
     )
@@ -905,6 +1045,7 @@ def account_catalog_list(client_slug, business_slug):
                     "id": account.id,
                     "code": account.code,
                     "name": account.name,
+                    "is_normative": account.is_normative,
                 }
                 for account in accounts
             ],
@@ -919,12 +1060,27 @@ def account_catalog_update(client_slug, business_slug):
     except ValueError:
         return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
 
+    payload = request.get_json(silent=True) or request.form
     try:
-        inventory_service.reject_catalog_account_update()
+        account = inventory_service.update_catalog_account(
+            account_code=str(payload.get("account_code", "")),
+            new_code=str(payload.get("new_code", "")),
+            new_name=str(payload.get("new_name", "")),
+        )
     except ValueError as exc:
         return jsonify({"ok": False, "message": str(exc)}), 400
 
-    return jsonify({"ok": True})
+    return jsonify(
+        {
+            "ok": True,
+            "item": {
+                "id": account.id,
+                "code": account.code,
+                "name": account.name,
+                "is_normative": account.is_normative,
+            },
+        }
+    )
 
 
 @bp.route("/account-adoption/audit-list", methods=["GET"])
@@ -958,6 +1114,257 @@ def account_adoption_audit_list(client_slug, business_slug):
                     ),
                 }
                 for audit in audits
+            ],
+        }
+    )
+
+
+@bp.route("/account-subaccount/list", methods=["GET"])
+def account_subaccount_list(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    include_inactive = request.args.get("include_inactive", "false").lower() == "true"
+    account_code = request.args.get("account_code")
+    try:
+        subaccounts = inventory_service.list_business_subaccounts(
+            business_id=business.id,
+            include_inactive=include_inactive,
+            account_code=account_code,
+        )
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return jsonify(
+        {
+            "ok": True,
+            "items": [
+                {
+                    "id": subaccount.id,
+                    "business_id": subaccount.business_id,
+                    "business_account_adoption_id": subaccount.business_account_adoption_id,
+                    "account_code": subaccount.adoption.account.code,
+                    "account_name": subaccount.adoption.account.name,
+                    "code": subaccount.code,
+                    "name": subaccount.name,
+                    "is_active": subaccount.is_active,
+                }
+                for subaccount in subaccounts
+            ],
+        }
+    )
+
+
+@bp.route("/account-subaccount/create", methods=["POST"])
+def account_subaccount_create(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    payload = request.get_json(silent=True) or request.form
+    try:
+        subaccount = inventory_service.create_business_subaccount(
+            business_id=business.id,
+            account_code=str(payload.get("account_code", "")),
+            code=str(payload.get("code", "")),
+            name=str(payload.get("name", "")),
+            actor=str(payload.get("actor", "") or ""),
+            source="inventory_api",
+            template_subaccount_id=(
+                int(payload.get("template_subaccount_id"))
+                if payload.get("template_subaccount_id") not in (None, "")
+                else None
+            ),
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return (
+        jsonify(
+            {
+                "ok": True,
+                "item": {
+                    "id": subaccount.id,
+                    "business_account_adoption_id": subaccount.business_account_adoption_id,
+                    "code": subaccount.code,
+                    "name": subaccount.name,
+                    "is_active": subaccount.is_active,
+                },
+            }
+        ),
+        201,
+    )
+
+
+@bp.route("/account-subaccount/<int:business_sub_account_id>/update", methods=["POST"])
+def account_subaccount_update(client_slug, business_slug, business_sub_account_id):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    payload = request.get_json(silent=True) or request.form
+
+    try:
+        subaccount = inventory_service.update_business_subaccount(
+            business_id=business.id,
+            business_sub_account_id=business_sub_account_id,
+            code=(str(payload.get("code", "")) if "code" in payload else None),
+            name=(str(payload.get("name", "")) if "name" in payload else None),
+            is_active=(
+                str(payload.get("is_active", "false")).lower() == "true"
+                if "is_active" in payload
+                else None
+            ),
+            actor=str(payload.get("actor", "") or ""),
+            source="inventory_api",
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return jsonify(
+        {
+            "ok": True,
+            "item": {
+                "id": subaccount.id,
+                "business_account_adoption_id": subaccount.business_account_adoption_id,
+                "code": subaccount.code,
+                "name": subaccount.name,
+                "is_active": subaccount.is_active,
+            },
+        }
+    )
+
+
+@bp.route("/accounting/ledger/list", methods=["GET"])
+def accounting_ledger_list(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    account_code = request.args.get("account_code")
+    entries = inventory_service.list_inventory_ledger_entries(
+        business_id=business.id,
+        account_code=account_code,
+    )
+    return jsonify(
+        {
+            "ok": True,
+            "items": [
+                {
+                    "id": entry.id,
+                    "movement_id": entry.movement_id,
+                    "movement_type": entry.movement_type,
+                    "destination": entry.destination,
+                    "source_bucket": entry.source_bucket,
+                    "destination_bucket": entry.destination_bucket,
+                    "source_account_code": entry.source_account_code,
+                    "destination_account_code": entry.destination_account_code,
+                    "quantity": entry.quantity,
+                    "unit": entry.unit,
+                    "unit_cost": entry.unit_cost,
+                    "amount": entry.amount,
+                    "valuation_method": entry.valuation_method,
+                    "document": entry.document,
+                    "reference_type": entry.reference_type,
+                    "reference_id": entry.reference_id,
+                    "created_at": (
+                        entry.created_at.isoformat() if entry.created_at else None
+                    ),
+                }
+                for entry in entries
+            ],
+        }
+    )
+
+
+@bp.route("/accounting/reconciliation", methods=["GET"])
+def accounting_reconciliation(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    items = inventory_service.summarize_inventory_account_reconciliation(
+        business_id=business.id
+    )
+    return jsonify({"ok": True, "items": items})
+
+
+@bp.route("/accounting/mixed-sale/create", methods=["POST"])
+def accounting_mixed_sale_create(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    payload = request.get_json(silent=True) or request.form
+    try:
+        breakdown = inventory_service.upsert_sale_cost_breakdown(
+            business_id=business.id,
+            sale_id=int(payload.get("sale_id")),
+            production_cost=float(payload.get("production_cost", 0)),
+            merchandise_cost=float(payload.get("merchandise_cost", 0)),
+            actor=str(payload.get("actor", "") or ""),
+            source="inventory_api",
+            production_account_code=str(payload.get("production_account_code", "1586")),
+            merchandise_account_code=str(
+                payload.get("merchandise_account_code", "1587")
+            ),
+            notes=payload.get("notes"),
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return (
+        jsonify(
+            {
+                "ok": True,
+                "item": {
+                    "id": breakdown.id,
+                    "sale_id": breakdown.sale_id,
+                    "production_account_code": breakdown.production_account_code,
+                    "merchandise_account_code": breakdown.merchandise_account_code,
+                    "production_cost": breakdown.production_cost,
+                    "merchandise_cost": breakdown.merchandise_cost,
+                },
+            }
+        ),
+        201,
+    )
+
+
+@bp.route("/accounting/mixed-sale/list", methods=["GET"])
+def accounting_mixed_sale_list(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    sale_id = request.args.get("sale_id", type=int)
+    items = inventory_service.list_sale_cost_breakdowns(
+        business_id=business.id,
+        sale_id=sale_id,
+    )
+
+    return jsonify(
+        {
+            "ok": True,
+            "items": [
+                {
+                    "id": item.id,
+                    "sale_id": item.sale_id,
+                    "production_account_code": item.production_account_code,
+                    "merchandise_account_code": item.merchandise_account_code,
+                    "production_cost": item.production_cost,
+                    "merchandise_cost": item.merchandise_cost,
+                    "notes": item.notes,
+                }
+                for item in items
             ],
         }
     )

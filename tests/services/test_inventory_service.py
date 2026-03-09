@@ -189,6 +189,73 @@ class TestInventoryService(unittest.TestCase):
         self.assertEqual(result.notes, "Cierre de lote")
         commit_mock.assert_called_once()
 
+    def test_finish_wip_balance_routes_to_sales_floor_when_product_flag_is_true(self):
+        wip_balance = SimpleNamespace(
+            id=56,
+            business_id=4,
+            inventory_item_id=100,
+            status=FakeWipModel.STATUS_OPEN,
+            remaining_quantity=5.0,
+            unit="kg",
+            notes=None,
+            produced_product_id=None,
+            can_be_subproduct=False,
+            finished_location="finished_goods",
+        )
+        fake_wip_model = FakeWipModel(wip_balance)
+        fake_product = SimpleNamespace(
+            id=77,
+            business_id=4,
+            can_be_subproduct=True,
+            goes_to_sales_floor=True,
+        )
+        fake_sales_floor_stock = SimpleNamespace(current_quantity=2.0)
+
+        with patch(
+            "app.services.inventory_service.InventoryWipBalance",
+            fake_wip_model,
+        ), patch("app.services.inventory_service.Product") as product_model_mock, patch(
+            "app.services.inventory_service.InventoryService._get_or_create_sales_floor_stock",
+            return_value=fake_sales_floor_stock,
+        ), patch(
+            "app.services.inventory_service.InventoryService.create_movement"
+        ) as create_movement_mock, patch(
+            "app.services.inventory_service.db.session.commit"
+        ) as commit_mock:
+            product_model_mock.query.get_or_404.return_value = fake_product
+            result = InventoryService.finish_wip_balance(
+                business_id=4,
+                wip_balance_id=56,
+                account_code="7101",
+                produced_product_id=77,
+                notes="Cierre a exposicion",
+            )
+
+        create_movement_mock.assert_called_once()
+        self.assertEqual(result.finished_location, "sales_floor")
+        self.assertEqual(result.produced_product_id, 77)
+        self.assertTrue(result.can_be_subproduct)
+        self.assertEqual(fake_sales_floor_stock.current_quantity, 7.0)
+        commit_mock.assert_called_once()
+
+    def test_consume_wip_subproduct_requires_subproduct_flag(self):
+        wip_balance = SimpleNamespace(
+            id=88,
+            business_id=8,
+            can_be_subproduct=False,
+        )
+        fake_wip_model = FakeWipModel(wip_balance)
+
+        with patch(
+            "app.services.inventory_service.InventoryWipBalance", fake_wip_model
+        ):
+            with self.assertRaises(ValueError):
+                InventoryService.consume_wip_subproduct_for_recipe(
+                    business_id=8,
+                    wip_balance_id=88,
+                    consumed_quantity=1.0,
+                )
+
     def test_list_movements_applies_item_and_date_filters(self):
         fake_result = [MagicMock(id=1)]
         fake_query = FakeQuery(fake_result)

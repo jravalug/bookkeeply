@@ -76,6 +76,7 @@
             {% set href_funds_settings = url_for('cash_flow.funds_settings', client_slug=active_client.slug, business_slug=current_business.slug) %}
             {% set href_products = url_for('product.list', client_slug=active_client.slug, business_slug=current_business.slug) %}
             {% set href_inventory = url_for('inventory.item_list', client_slug=active_client.slug, business_slug=current_business.slug) %}
+            {% set href_inventory_accounting = url_for('inventory.accounting_manage', client_slug=active_client.slug, business_slug=current_business.slug) %}
             {% set href_monthly_sales_by_date = url_for('report.monthly_sales_by_date', client_slug=active_client.slug, business_slug=current_business.slug) %}
             {% set href_monthly_sales_by_product = url_for('report.monthly_sales_by_produc', client_slug=active_client.slug, business_slug=current_business.slug) %}
             {% set href_inventory_consumption = url_for('report.inventory_consumption_view', client_slug=active_client.slug, business_slug=current_business.slug) %}

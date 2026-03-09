@@ -302,10 +302,28 @@ class InventoryWipBalance(db.Model):
         nullable=True,
         index=True,
     )
+    produced_product_id = db.Column(
+        db.Integer,
+        db.ForeignKey("product.id"),
+        nullable=True,
+        index=True,
+    )
     quantity = db.Column(db.Float, nullable=False)
     remaining_quantity = db.Column(db.Float, nullable=False)
     unit = db.Column(db.String(20), nullable=False)
     status = db.Column(db.String(20), nullable=False, index=True)
+    can_be_subproduct = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default=db.false(),
+    )
+    finished_location = db.Column(
+        db.String(30),
+        nullable=False,
+        default="finished_goods",
+        server_default="finished_goods",
+    )
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(
         db.DateTime,
@@ -333,6 +351,18 @@ class InventoryWipBalance(db.Model):
         "Inventory",
         foreign_keys=[source_inventory_id],
         backref="wip_balances",
+    )
+    produced_product = db.relationship(
+        "Product",
+        foreign_keys=[produced_product_id],
+        backref="wip_outputs",
+    )
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "finished_location IN ('finished_goods', 'sales_floor')",
+            name="ck_inventory_wip_balance_finished_location",
+        ),
     )
 
 
@@ -383,5 +413,134 @@ class InventorySalesFloorStock(db.Model):
             "business_id",
             "inventory_item_id",
             name="uq_sales_floor_stock_business_item",
+        ),
+    )
+
+
+class InventoryLedgerEntry(db.Model):
+    __tablename__ = "inventory_ledger_entry"
+
+    id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("business.id"),
+        nullable=False,
+        index=True,
+    )
+    movement_id = db.Column(
+        db.Integer,
+        db.ForeignKey("inventory_movement.id"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    movement_type = db.Column(db.String(30), nullable=False, index=True)
+    destination = db.Column(db.String(30), nullable=True, index=True)
+    source_bucket = db.Column(db.String(30), nullable=False)
+    destination_bucket = db.Column(db.String(30), nullable=False)
+    source_account_code = db.Column(db.String(20), nullable=True, index=True)
+    destination_account_code = db.Column(db.String(20), nullable=True, index=True)
+    quantity = db.Column(db.Float, nullable=False, default=0.0)
+    unit = db.Column(db.String(20), nullable=False)
+    unit_cost = db.Column(db.Float, nullable=True)
+    amount = db.Column(db.Float, nullable=False, default=0.0)
+    valuation_method = db.Column(
+        db.String(20),
+        nullable=False,
+        default="fifo",
+        server_default="fifo",
+    )
+    document = db.Column(db.String(80), nullable=True)
+    reference_type = db.Column(db.String(40), nullable=True)
+    reference_id = db.Column(db.Integer, nullable=True)
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+
+    business = db.relationship(
+        "Business",
+        foreign_keys=[business_id],
+        backref="inventory_ledger_entries",
+    )
+    movement = db.relationship(
+        "InventoryMovement",
+        foreign_keys=[movement_id],
+        backref="ledger_entry",
+    )
+
+    __table_args__ = (
+        db.CheckConstraint("amount >= 0", name="ck_inventory_ledger_entry_amount"),
+        db.CheckConstraint(
+            "valuation_method IN ('fifo', 'fefo', 'manual')",
+            name="ck_inventory_ledger_entry_valuation_method",
+        ),
+    )
+
+
+class InventorySaleCostBreakdown(db.Model):
+    __tablename__ = "inventory_sale_cost_breakdown"
+
+    id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("business.id"),
+        nullable=False,
+        index=True,
+    )
+    sale_id = db.Column(
+        db.Integer,
+        db.ForeignKey("sale.id"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    production_account_code = db.Column(
+        db.String(20),
+        nullable=False,
+        default="1586",
+        server_default="1586",
+    )
+    merchandise_account_code = db.Column(
+        db.String(20),
+        nullable=False,
+        default="1587",
+        server_default="1587",
+    )
+    production_cost = db.Column(db.Float, nullable=False, default=0.0)
+    merchandise_cost = db.Column(db.Float, nullable=False, default=0.0)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp(),
+    )
+
+    business = db.relationship(
+        "Business",
+        foreign_keys=[business_id],
+        backref="sale_cost_breakdowns",
+    )
+    sale = db.relationship(
+        "Sale",
+        foreign_keys=[sale_id],
+        backref="cost_breakdown",
+    )
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "production_cost >= 0",
+            name="ck_inventory_sale_cost_breakdown_production_cost",
+        ),
+        db.CheckConstraint(
+            "merchandise_cost >= 0",
+            name="ck_inventory_sale_cost_breakdown_merchandise_cost",
         ),
     )

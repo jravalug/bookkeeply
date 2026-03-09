@@ -237,7 +237,6 @@ Objetivo: controlar mercancia colocada para venta directa y automatizar reposici
 - [ ] Implementar sugerencia de reposicion desde almacen a exposicion (manual/semiautomatica).
 - [ ] Reposicion de exposicion: ejecucion manual con sugerencia automatica.
 - [ ] Incluir doble sugerencia en alerta: `hasta_max` y `por_promedio_7_dias`.
-- [ ] Alertar quiebre y sobrestock de exposicion.
 - [x] Crear entidad de stock en exposicion por item y unica ubicacion de venta (etapa actual).
 - [x] Definir umbrales `min_exhibicion` y `max_exhibicion` por item-ubicacion.
 - [x] Implementar sugerencia de reposicion desde almacen a exposicion (manual/semiautomatica).
@@ -253,17 +252,17 @@ Objetivo: mantener trazabilidad de insumos parcialmente consumidos hasta su cier
 
 ### Entregables 4
 
-- [ ] Crear entidad `inventory_wip_balance` por item/lote para salidas parciales.
-- [ ] Registrar flujo `inventory -> wip -> finished_goods` con estados y cantidades.
-- [ ] Permitir remanente en WIP y su consumo en multiples elaboraciones.
-- [ ] Permitir que un producto terminado pase a subproducto en WIP para nuevas elaboraciones.
-- [ ] Permitir baja de WIP por merma (`rotura`, `deterioro`, `caducidad`, `otros`).
+- [x] Crear entidad `inventory_wip_balance` por item/lote para salidas parciales.
+- [x] Registrar flujo `inventory -> wip -> finished_goods` con estados y cantidades.
+- [x] Permitir remanente en WIP y su consumo en multiples elaboraciones.
+- [x] Permitir que un producto terminado pase a subproducto en WIP para nuevas elaboraciones.
+- [x] Permitir baja de WIP por merma (`rotura`, `deterioro`, `caducidad`, `otros`).
 - [ ] Fecha de vencimiento en WIP opcional por producto; si aplica, hereda o referencia caducidad de inventario.
-- [ ] Permitir uso dual del subproducto WIP: venta directa o consumo en nuevas recetas.
-- [ ] Restringir retorno de salidas a almacen (sin flujo de devolucion a almacen en esta etapa).
-- [ ] Subfase 4.1: caso restaurante/bar/cafeteria (ej. consumo parcial de lata).
-- [ ] Subfase 4.2: caso subproducto (ej. salsa base en WIP consumida despues por otras recetas).
-- [ ] Subfase 4.3: contabilizacion monetaria de WIP -> terminada -> (venta | merma) y control de ubicacion para `terminada_en_exposicion`.
+- [x] Permitir uso dual del subproducto WIP: venta directa o consumo en nuevas recetas.
+- [x] Restringir retorno de salidas a almacen (sin flujo de devolucion a almacen en esta etapa).
+- [x] Subfase 4.1: caso restaurante/bar/cafeteria (ej. consumo parcial de lata).
+- [x] Subfase 4.2: caso subproducto (ej. salsa base en WIP consumida despues por otras recetas).
+- [x] Subfase 4.3: contabilizacion monetaria de WIP -> terminada -> (venta | merma) y control de ubicacion para `terminada_en_exposicion`.
 
 ## Fase 5 - Existencias, conversion de unidades y valorizacion de stock
 
@@ -289,8 +288,8 @@ Objetivo: sincronizar consumo real desde ventas sin descuadres de inventario.
 
 - [ ] Mapear receta -> materias primas con equivalencias de unidad robustas.
 - [ ] Leer desde ficha tecnica: raciones y consumos de insumos.
-- [ ] Leer desde `Product`: bandera `puede_ser_subproducto` aplicable a todos los negocios.
-- [ ] Leer desde `Product`: bandera `va_a_exposicion` (default `False`) para decidir ubicacion de produccion terminada.
+- [x] Leer desde `Product`: bandera `puede_ser_subproducto` aplicable a todos los negocios.
+- [x] Leer desde `Product`: bandera `va_a_exposicion` (default `False`) para decidir ubicacion de produccion terminada.
 - [ ] Descontar consumo automaticamente al confirmar venta.
 - [ ] Revertir consumo en anulaciones/correcciones de venta.
 - [ ] Detectar y reportar ventas con receta incompleta o materia prima inexistente.
@@ -373,33 +372,33 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 
 ### Entregables 13
 
-- [ ] Motor de asientos para transiciones definidas del ciclo contable de inventario.
-- [ ] Trazabilidad por movimiento: documento, monto, cuenta origen, cuenta destino.
-- [ ] Reglas de valorizacion alineadas a FEFO/FIFO para importes de salida.
-- [ ] Reporte de conciliacion: saldos de cuentas vs saldos operativos de stock.
-- [ ] Reusar y extender `ACAccount` como `nomenclador_general_cuentas` (sin duplicar modelo paralelo).
-- [ ] Crear carga inicial (seed/migracion) del nomenclador desde Resolucion 494/2016.
-- [ ] Bloquear edicion de codigo y nombre en `ACAccount` cuando pertenezca al nomenclador general normativo.
-- [ ] Configurar seleccion de cuentas por negocio desde el nomenclador general.
-- [ ] Restringir asientos y operaciones a cuentas previamente adoptadas por negocio.
-- [ ] Reusar y extender `ACSubAccount` para subcuentas por negocio.
-- [ ] Modelar relacion obligatoria subcuenta -> cuenta padre.
-- [ ] Implementar auditoria de adopcion/desadopcion y asociaciones cuenta-subcuenta por negocio.
-- [ ] Separar asiento de merma de materias primas/materiales y merma de produccion terminada.
-- [ ] En ventas mixtas, descomponer costo en lineas `1586` (produccion) y `1587` (mercancias).
+- [x] Motor de asientos para transiciones definidas del ciclo contable de inventario.
+- [x] Trazabilidad por movimiento: documento, monto, cuenta origen, cuenta destino.
+- [x] Reglas de valorizacion alineadas a FEFO/FIFO para importes de salida.
+- [x] Reporte de conciliacion: saldos de cuentas vs saldos operativos de stock.
+- [x] Reusar y extender `ACAccount` como `nomenclador_general_cuentas` (sin duplicar modelo paralelo).
+- [x] Crear carga inicial (seed/migracion) del nomenclador desde Resolucion 494/2016.
+- [x] Bloquear edicion de codigo y nombre en `ACAccount` cuando pertenezca al nomenclador general normativo.
+- [x] Configurar seleccion de cuentas por negocio desde el nomenclador general.
+- [x] Restringir asientos y operaciones a cuentas previamente adoptadas por negocio.
+- [x] Reusar y extender `ACSubAccount` para subcuentas por negocio.
+- [x] Modelar relacion obligatoria subcuenta -> cuenta padre.
+- [x] Implementar auditoria de adopcion/desadopcion y asociaciones cuenta-subcuenta por negocio.
+- [x] Separar asiento de merma de materias primas/materiales y merma de produccion terminada.
+- [x] En ventas mixtas, descomponer costo en lineas `1586` (produccion) y `1587` (mercancias).
 
 ### Criterios de aceptacion 13
 
-- [ ] DB: el nomenclador general cargado desde Resolucion 494/2016 queda marcado como normativo e inmutable (`codigo`, `nombre`).
-- [ ] DB: existe estructura de adopcion de cuenta por negocio (cuenta general -> negocio) sin duplicar el catalogo normativo.
-- [ ] DB: toda subcuenta de negocio referencia obligatoriamente una cuenta adoptada del propio negocio.
-- [ ] API: cualquier intento de editar `codigo` o `nombre` de una cuenta normativa retorna error de validacion controlado.
-- [ ] API: no se permite registrar asiento ni configuracion operativa sobre cuenta no adoptada por el negocio.
-- [ ] API: al desadoptar una cuenta, se bloquea la accion si existen subcuentas activas o movimientos asociados sin cerrar.
-- [ ] UI: en mantenimiento de nomenclador general, `codigo` y `nombre` se muestran solo lectura.
-- [ ] UI: la gestion contable del negocio expone flujo explicito de `adoptar/desadoptar` cuentas normativas.
-- [ ] Auditoria: se registra adopcion/desadopcion y alta/baja/edicion de subcuentas por negocio (usuario, fecha, antes, despues).
-- [ ] Pruebas: casos automatizados cubren bloqueo de edicion normativa, restriccion de uso sin adopcion y trazabilidad de auditoria.
+- [x] DB: el nomenclador general cargado desde Resolucion 494/2016 queda marcado como normativo e inmutable (`codigo`, `nombre`).
+- [x] DB: existe estructura de adopcion de cuenta por negocio (cuenta general -> negocio) sin duplicar el catalogo normativo.
+- [x] DB: toda subcuenta de negocio referencia obligatoriamente una cuenta adoptada del propio negocio.
+- [x] API: cualquier intento de editar `codigo` o `nombre` de una cuenta normativa retorna error de validacion controlado.
+- [x] API: no se permite registrar asiento ni configuracion operativa sobre cuenta no adoptada por el negocio.
+- [x] API: al desadoptar una cuenta, se bloquea la accion si existen subcuentas activas o movimientos asociados sin cerrar.
+- [x] UI: en mantenimiento de nomenclador general, `codigo` y `nombre` se muestran solo lectura.
+- [x] UI: la gestion contable del negocio expone flujo explicito de `adoptar/desadoptar` cuentas normativas.
+- [x] Auditoria: se registra adopcion/desadopcion y alta/baja/edicion de subcuentas por negocio (usuario, fecha, antes, despues).
+- [x] Pruebas: casos automatizados cubren bloqueo de edicion normativa, restriccion de uso sin adopcion y trazabilidad de auditoria.
 
 ## 6) Tablero de ejecucion activo
 
@@ -417,12 +416,12 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 - [ ] F4.1 Modelar flujo WIP con consumo parcial y merma de remanentes.
 - [ ] F4.2 Modelar subproductos en WIP para consumo en elaboraciones posteriores.
 - [ ] F4.3 Permitir subproducto WIP para venta directa y consumo en recetas.
-- [ ] F4.4 Implementar `va_a_exposicion` para produccion terminada sin cambio de cuenta contable.
-- [ ] F13.1 Diseñar asientos contables por transicion monetaria de inventario.
-- [ ] F13.2 Diseñar nomenclador general y selector de cuentas por negocio.
-- [ ] F13.3 Diseñar subcuentas por negocio con asociacion obligatoria a cuenta padre y separacion de mermas por tipo.
-- [ ] F13.4 Diseñar desglose contable de ventas mixtas (`1586`/`1587`).
-- [ ] F13.5 Diseñar y aplicar auditoria de adopciones y asociaciones contables por negocio.
+- [x] F4.4 Implementar `va_a_exposicion` para produccion terminada sin cambio de cuenta contable.
+- [x] F13.1 Diseñar asientos contables por transicion monetaria de inventario.
+- [x] F13.2 Diseñar nomenclador general y selector de cuentas por negocio.
+- [x] F13.3 Diseñar subcuentas por negocio con asociacion obligatoria a cuenta padre y separacion de mermas por tipo.
+- [x] F13.4 Diseñar desglose contable de ventas mixtas (`1586`/`1587`).
+- [x] F13.5 Diseñar y aplicar auditoria de adopciones y asociaciones contables por negocio.
 
 ### Paquete de arranque (ejecucion inmediata)
 
@@ -460,8 +459,8 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 - [x] F1.4/F1.5/F1.6 Completar separacion catalogo vs entrada y unicidad operativa de `producto_variante` por negocio.
 - [x] F2.1/F2.2 Completar tarjeta de estiba por `item+lote` y lote automatico cuando aplique.
 - [x] F3.1/F3.2/F3.3 Implementar stock de exposicion y reposicion con alertas `hasta_max` y `promedio_7_dias`.
-- [ ] F4.2/F4.3/F4.4 Completar flujo de subproducto WIP y reglas de ubicacion de produccion terminada.
-- [ ] F13 (criterios pendientes) Completar validaciones DB/API/UI y cobertura de auditoria/pruebas del esquema contable.
+- [x] F4.2/F4.3/F4.4 Completar flujo de subproducto WIP y reglas de ubicacion de produccion terminada.
+- [x] F13 Cerrar separacion de asiento de merma por tipo (`materias_primas/materiales` vs `produccion_terminada`).
 
 ### Bloque posterior
 
@@ -522,3 +521,22 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 - 2026-03-09: Se implementa control de exposicion con nueva entidad `InventorySalesFloorStock` (migracion `f8a1b2c3d4e5`) y endpoints `/sales-floor/list`, `/sales-floor/configure`, `/sales-floor/transfer`, `/sales-floor/alerts`.
 - 2026-03-09: Se implementa traslado manual almacen -> exposicion con descuento inmediato en almacen via `transfer` a `sales_floor`, y alertas visuales con doble sugerencia (`hasta_max`, `promedio_7_dias`) mas indicadores de quiebre/sobrestock.
 - 2026-03-09: Se agregan pruebas para reglas y rutas de exposicion en `tests/services/test_inventory_sales_floor_rules.py` y `tests/routes/test_inventory_sales_floor_routes.py`; corrida consolidada en `webdev` queda en `30 tests OK`.
+- 2026-03-09: Se implementa `F4.2/F4.3/F4.4` con metadatos de subproducto y ubicacion final en `inventory_wip_balance` (`produced_product_id`, `can_be_subproduct`, `finished_location`) y banderas en `Product` (`can_be_subproduct`, `goes_to_sales_floor`) mediante migracion `f9c1d2e3a4b5`.
+- 2026-03-09: Se habilitan endpoints WIP para subproducto (`/wip/<id>/mark-subproduct`, `/wip/<id>/consume-subproduct`) y cierre de WIP con `produced_product_id`; cuando `goes_to_sales_floor=True` el cierre queda en ubicacion `sales_floor` sin transicion contable adicional.
+- 2026-03-09: Se agregan pruebas de servicio/ruta para subproducto y ubicacion de terminada en exposicion en `tests/services/test_inventory_service.py` y `tests/routes/test_inventory_wip_routes.py`; corrida consolidada en `webdev` queda en `34 tests OK`.
+- 2026-03-09: Se implementa subcuenta por negocio (`BusinessSubAccount`) reutilizando `ACSubAccount` como plantilla opcional, con asociacion obligatoria a `BusinessAccountAdoption` y restriccion DB de misma empresa (FK compuesta `business_id + adoption_id`) mediante migracion `fa2b3c4d5e6f`.
+- 2026-03-09: Se extiende auditoria contable con `BusinessSubAccountAudit` (alta/edicion/baja logica de subcuentas) y APIs `/account-subaccount/list`, `/account-subaccount/create`, `/account-subaccount/<id>/update`.
+- 2026-03-09: Se endurece regla de desadopcion para bloquear cuentas con subcuentas activas asociadas, ademas del bloqueo existente por movimientos contables asociados.
+- 2026-03-09: Se agregan pruebas `tests/services/test_inventory_account_subaccount_rules.py` y `tests/routes/test_inventory_account_subaccount_routes.py`; corrida consolidada en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` queda en `40 tests OK`.
+- 2026-03-09: Se implementa motor de asientos de inventario con `InventoryLedgerEntry` (migracion `fb3c4d5e6f7a`), registrando automaticamente por movimiento trazabilidad de documento, monto, cuenta origen/destino, flujo origen/destino y metodo de valorizacion (`fifo`/`fefo`).
+- 2026-03-09: Se publican endpoints contables de inventario `/accounting/ledger/list` y `/accounting/reconciliation` para consulta de asientos y conciliacion por cuenta (saldo libro vs saldo operativo por movimientos).
+- 2026-03-09: Se implementa desglose de costo para ventas mixtas (`1586`/`1587`) con `InventorySaleCostBreakdown` y endpoints `/accounting/mixed-sale/create` y `/accounting/mixed-sale/list`.
+- 2026-03-09: Se agregan pruebas `tests/services/test_inventory_accounting_ledger_rules.py` y `tests/routes/test_inventory_accounting_routes.py`; corrida consolidada en `webdev` queda en `44 tests OK`.
+- 2026-03-09: Se normaliza `ACAccount` con bandera `is_normative` y se ajusta el guard `before_update` para bloquear edicion de `codigo/nombre` solo en cuentas normativas del nomenclador.
+- 2026-03-09: Se agrega migracion `fc4d5e6f7a8b` para carga inicial/actualizacion normativa del nomenclador (base Resolucion 494/2016 para cuentas operativas `1586`, `1587`, `800`) y marca inmutable en DB.
+- 2026-03-09: Se fortalece API de mantenimiento del catalogo (`/account-catalog/list` incluye `is_normative`; `/account-catalog/update` valida y rechaza edicion de cuentas normativas con error controlado).
+- 2026-03-09: Se agregan pruebas `tests/services/test_inventory_account_catalog_rules.py` y `tests/routes/test_inventory_account_catalog_routes.py`; corrida consolidada en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` queda en `47 tests OK`.
+- 2026-03-09: Se implementa vista de gestion contable de inventario (`/inventory/accounting/manage`) con flujo explicito de adopcion/desadopcion y render de catalogo normativo en solo lectura (`codigo`/`nombre`), incluyendo enlace de navegacion en sidebar.
+- 2026-03-09: Se agrega cobertura de ruta para la vista de gestion contable en `tests/routes/test_inventory_accounting_manage_view.py` y la corrida consolidada en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`) queda en `49 tests OK`.
+- 2026-03-09: Se cierra pendiente F13 de merma contable separada: `waste` diferencia `materias_primas/materiales` (`warehouse -> waste_raw_materials`) y `produccion_terminada` (`finished_goods -> waste_finished_goods`) con contraparte de gasto `800` en ledger.
+- 2026-03-09: Se agregan pruebas de servicio para merma separada en `tests/services/test_inventory_accounting_ledger_rules.py` y la corrida consolidada en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`) queda en `51 tests OK`.

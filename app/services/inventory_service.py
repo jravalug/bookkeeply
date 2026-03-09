@@ -2,6 +2,7 @@ import re
 import unicodedata
 from datetime import UTC, datetime
 from datetime import timedelta
+from sqlalchemy import or_
 
 from app import db
 from app.models import (
@@ -9,13 +10,19 @@ from app.models import (
     Business,
     BusinessAccountAdoption,
     BusinessAccountAdoptionAudit,
+    BusinessSubAccount,
+    BusinessSubAccountAudit,
     Inventory,
     InventoryItem,
     InventoryProductGeneric,
     InventoryProductSpecific,
     InventorySalesFloorStock,
     InventoryMovement,
+    InventoryLedgerEntry,
     InventoryWipBalance,
+    InventorySaleCostBreakdown,
+    Product,
+    Sale,
     Supply,
 )
 from app.utils.slug_utils import get_business_by_slugs
@@ -43,11 +50,21 @@ class InventoryService:
         "wip_close",
     }
     ALLOWED_DESTINATIONS = {"sales_floor", "wip", "finished_goods"}
+    ALLOWED_VALUATION_METHODS = {"fifo", "fefo", "manual"}
     ALLOWED_WIP_STATUSES = {
         InventoryWipBalance.STATUS_OPEN,
         InventoryWipBalance.STATUS_FINISHED,
         InventoryWipBalance.STATUS_WASTE,
     }
+    WASTE_EXPENSE_ACCOUNT_CODE = "800"
+
+    @staticmethod
+    def _parse_bool(value, default: bool = False) -> bool:
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            return value
+        return str(value).strip().lower() in {"1", "true", "yes", "on", "si", "s"}
 
     @staticmethod
     def _get_or_create_sales_floor_stock(
@@ -585,7 +602,239 @@ class InventoryService:
         )
         db.session.add(movement)
         db.session.commit()
+        InventoryService.register_inventory_ledger_for_movement(movement)
         return movement
+
+    @staticmethod
+    def _resolve_movement_amount(movement: InventoryMovement) -> float:
+        if movement.total_cost is not None:
+            return max(0.0, float(movement.total_cost))
+        if movement.unit_cost is not None:
+            return max(0.0, float(movement.unit_cost) * float(movement.quantity or 0.0))
+        return 0.0
+
+    @staticmethod
+    def _resolve_inventory_ledger_flow(
+        movement_type: str,
+        destination: str | None,
+    ) -> tuple[str, str]:
+        destination_norm = (destination or "").strip().lower() or None
+        if movement_type == "purchase":
+            return "supplier", "warehouse"
+        if movement_type == "consumption":
+            return "warehouse", "consumption"
+        if movement_type == "waste":
+            if destination_norm == "finished_goods":
+                return "finished_goods", "waste_finished_goods"
+            return "warehouse", "waste_raw_materials"
+        if movement_type == "transfer":
+            return "warehouse", destination_norm or "warehouse"
+        if movement_type == "wip_close":
+            return "wip", destination_norm or "finished_goods"
+        if movement_type == "adjustment":
+            return "adjustment", "warehouse"
+        return "unknown", destination_norm or "unknown"
+
+    @staticmethod
+    def register_inventory_ledger_for_movement(
+        movement: InventoryMovement,
+    ) -> InventoryLedgerEntry:
+        source_bucket, destination_bucket = (
+            InventoryService._resolve_inventory_ledger_flow(
+                movement_type=(movement.movement_type or "").strip().lower(),
+                destination=movement.destination,
+            )
+        )
+
+        account_code = (movement.account_code or "").strip() or None
+        source_account_code = account_code
+        destination_account_code = account_code
+
+        if movement.movement_type == "purchase":
+            source_account_code = None
+        elif movement.movement_type == "consumption":
+            destination_account_code = None
+        elif movement.movement_type == "waste":
+            destination_account_code = InventoryService.WASTE_EXPENSE_ACCOUNT_CODE
+
+        valuation_method = "fefo" if (movement.lot_code or "").strip() else "fifo"
+        amount = InventoryService._resolve_movement_amount(movement)
+
+        entry = InventoryLedgerEntry.query.filter_by(movement_id=movement.id).first()
+        if not entry:
+            entry = InventoryLedgerEntry(
+                business_id=movement.business_id,
+                movement_id=movement.id,
+            )
+            db.session.add(entry)
+
+        entry.movement_type = movement.movement_type
+        entry.destination = movement.destination
+        entry.source_bucket = source_bucket
+        entry.destination_bucket = destination_bucket
+        entry.source_account_code = source_account_code
+        entry.destination_account_code = destination_account_code
+        entry.quantity = float(movement.quantity or 0.0)
+        entry.unit = movement.unit
+        entry.unit_cost = movement.unit_cost
+        entry.amount = amount
+        entry.valuation_method = valuation_method
+        entry.document = movement.document
+        entry.reference_type = movement.reference_type
+        entry.reference_id = movement.reference_id
+        db.session.commit()
+        return entry
+
+    @staticmethod
+    def _resolve_waste_expense_account_code(
+        movement_type: str,
+    ) -> str | None:
+        if movement_type == "waste":
+            return InventoryService.WASTE_EXPENSE_ACCOUNT_CODE
+        return None
+
+    @staticmethod
+    def list_inventory_ledger_entries(
+        business_id: int,
+        account_code: str | None = None,
+    ) -> list[InventoryLedgerEntry]:
+        query = InventoryLedgerEntry.query.filter(
+            InventoryLedgerEntry.business_id == business_id
+        )
+        normalized_code = (account_code or "").strip()
+        if normalized_code:
+            query = query.filter(
+                or_(
+                    InventoryLedgerEntry.source_account_code == normalized_code,
+                    InventoryLedgerEntry.destination_account_code == normalized_code,
+                )
+            )
+
+        return query.order_by(InventoryLedgerEntry.created_at.desc()).all()
+
+    @staticmethod
+    def summarize_inventory_account_reconciliation(business_id: int):
+        ledger_entries = InventoryService.list_inventory_ledger_entries(
+            business_id=business_id
+        )
+        movements = InventoryService.list_movements(business_id=business_id)
+
+        rows_by_account: dict[str, dict] = {}
+
+        def _ensure_row(account_code: str):
+            if account_code not in rows_by_account:
+                rows_by_account[account_code] = {
+                    "account_code": account_code,
+                    "ledger_in": 0.0,
+                    "ledger_out": 0.0,
+                    "ledger_balance": 0.0,
+                    "operational_in": 0.0,
+                    "operational_out": 0.0,
+                    "operational_balance": 0.0,
+                    "difference": 0.0,
+                }
+            return rows_by_account[account_code]
+
+        for entry in ledger_entries:
+            if entry.destination_account_code:
+                row = _ensure_row(entry.destination_account_code)
+                row["ledger_in"] += float(entry.amount or 0.0)
+            if entry.source_account_code:
+                row = _ensure_row(entry.source_account_code)
+                row["ledger_out"] += float(entry.amount or 0.0)
+
+        for movement in movements:
+            account_code = (movement.account_code or "").strip()
+            if not account_code:
+                continue
+
+            row = _ensure_row(account_code)
+            amount = InventoryService._resolve_movement_amount(movement)
+            movement_type = (movement.movement_type or "").strip().lower()
+            if movement_type in {"purchase", "adjustment", "wip_close"}:
+                row["operational_in"] += amount
+            elif movement_type in {"consumption", "transfer", "waste"}:
+                row["operational_out"] += amount
+
+            expense_account_code = InventoryService._resolve_waste_expense_account_code(
+                movement_type=movement_type
+            )
+            if expense_account_code:
+                expense_row = _ensure_row(expense_account_code)
+                expense_row["operational_in"] += amount
+
+        items = []
+        for account_code, row in sorted(
+            rows_by_account.items(), key=lambda pair: pair[0]
+        ):
+            row["ledger_balance"] = round(row["ledger_in"] - row["ledger_out"], 2)
+            row["operational_balance"] = round(
+                row["operational_in"] - row["operational_out"],
+                2,
+            )
+            row["difference"] = round(
+                row["ledger_balance"] - row["operational_balance"],
+                2,
+            )
+            row["ledger_in"] = round(row["ledger_in"], 2)
+            row["ledger_out"] = round(row["ledger_out"], 2)
+            row["operational_in"] = round(row["operational_in"], 2)
+            row["operational_out"] = round(row["operational_out"], 2)
+            items.append(row)
+        return items
+
+    @staticmethod
+    def upsert_sale_cost_breakdown(
+        business_id: int,
+        sale_id: int,
+        production_cost: float,
+        merchandise_cost: float,
+        actor: str | None = None,
+        source: str | None = "inventory_api",
+        production_account_code: str = "1586",
+        merchandise_account_code: str = "1587",
+        notes: str | None = None,
+    ) -> InventorySaleCostBreakdown:
+        _ = actor, source
+        sale = Sale.query.get_or_404(sale_id)
+        if sale.business_id != business_id:
+            raise ValueError("La venta no pertenece al negocio")
+
+        production_amount = float(production_cost)
+        merchandise_amount = float(merchandise_cost)
+        if production_amount < 0 or merchandise_amount < 0:
+            raise ValueError("Los costos de desglose no pueden ser negativos")
+
+        production_code = (production_account_code or "").strip() or "1586"
+        merchandise_code = (merchandise_account_code or "").strip() or "1587"
+
+        breakdown = InventorySaleCostBreakdown.query.filter_by(sale_id=sale_id).first()
+        if not breakdown:
+            breakdown = InventorySaleCostBreakdown(
+                business_id=business_id,
+                sale_id=sale_id,
+            )
+            db.session.add(breakdown)
+
+        breakdown.production_account_code = production_code
+        breakdown.merchandise_account_code = merchandise_code
+        breakdown.production_cost = production_amount
+        breakdown.merchandise_cost = merchandise_amount
+        breakdown.notes = notes
+        db.session.commit()
+        return breakdown
+
+    @staticmethod
+    def list_sale_cost_breakdowns(
+        business_id: int,
+        sale_id: int | None = None,
+    ) -> list[InventorySaleCostBreakdown]:
+        query = InventorySaleCostBreakdown.query.filter(
+            InventorySaleCostBreakdown.business_id == business_id
+        )
+        if sale_id is not None:
+            query = query.filter(InventorySaleCostBreakdown.sale_id == sale_id)
+        return query.order_by(InventorySaleCostBreakdown.created_at.desc()).all()
 
     @staticmethod
     def _movement_stock_delta(movement_type: str, quantity: float) -> float:
@@ -683,6 +932,7 @@ class InventoryService:
         unit: str,
         account_code: str,
         source_inventory_id: int | None = None,
+        can_be_subproduct: bool = False,
         notes: str | None = None,
     ) -> InventoryWipBalance:
         movement = InventoryService.create_movement(
@@ -705,11 +955,45 @@ class InventoryService:
             remaining_quantity=float(quantity),
             unit=movement.unit,
             status=InventoryWipBalance.STATUS_OPEN,
+            can_be_subproduct=bool(can_be_subproduct),
+            finished_location="finished_goods",
             notes=notes,
         )
         db.session.add(wip_balance)
         db.session.commit()
         return wip_balance
+
+    @staticmethod
+    def mark_wip_as_subproduct(
+        business_id: int,
+        wip_balance_id: int,
+        can_be_subproduct: bool,
+    ) -> InventoryWipBalance:
+        wip_balance = InventoryWipBalance.query.get_or_404(wip_balance_id)
+        if wip_balance.business_id != business_id:
+            raise ValueError("El balance WIP no pertenece al negocio")
+
+        wip_balance.can_be_subproduct = bool(can_be_subproduct)
+        db.session.commit()
+        return wip_balance
+
+    @staticmethod
+    def consume_wip_subproduct_for_recipe(
+        business_id: int,
+        wip_balance_id: int,
+        consumed_quantity: float,
+    ) -> InventoryWipBalance:
+        wip_balance = InventoryWipBalance.query.get_or_404(wip_balance_id)
+        if wip_balance.business_id != business_id:
+            raise ValueError("El balance WIP no pertenece al negocio")
+        if not wip_balance.can_be_subproduct:
+            raise ValueError("El balance WIP no esta marcado como subproducto")
+
+        return InventoryService.consume_wip_balance(
+            business_id=business_id,
+            wip_balance_id=wip_balance_id,
+            consumed_quantity=consumed_quantity,
+        )
 
     @staticmethod
     def consume_wip_balance(
@@ -741,6 +1025,7 @@ class InventoryService:
         business_id: int,
         wip_balance_id: int,
         account_code: str,
+        produced_product_id: int | None = None,
         notes: str | None = None,
     ) -> InventoryWipBalance:
         wip_balance = InventoryWipBalance.query.get_or_404(wip_balance_id)
@@ -767,8 +1052,31 @@ class InventoryService:
             notes=notes,
         )
 
+        produced_product = None
+        if produced_product_id is not None:
+            produced_product = Product.query.get_or_404(produced_product_id)
+            if produced_product.business_id != business_id:
+                raise ValueError("El producto terminado no pertenece al negocio")
+
+        finished_location = "finished_goods"
+        if produced_product and produced_product.goes_to_sales_floor:
+            sales_floor_stock = InventoryService._get_or_create_sales_floor_stock(
+                business_id=business_id,
+                inventory_item_id=wip_balance.inventory_item_id,
+            )
+            sales_floor_stock.current_quantity = (
+                float(sales_floor_stock.current_quantity or 0.0) + close_quantity
+            )
+            finished_location = "sales_floor"
+
         wip_balance.status = InventoryWipBalance.STATUS_FINISHED
         wip_balance.remaining_quantity = 0.0
+        wip_balance.produced_product_id = (
+            produced_product.id if produced_product else None
+        )
+        if produced_product and produced_product.can_be_subproduct:
+            wip_balance.can_be_subproduct = True
+        wip_balance.finished_location = finished_location
         if notes is not None:
             wip_balance.notes = notes
         db.session.commit()
@@ -831,10 +1139,42 @@ class InventoryService:
         return ACAccount.query.order_by(ACAccount.code.asc()).all()
 
     @staticmethod
-    def reject_catalog_account_update():
-        raise ValueError(
-            "El nomenclador general es normativo y no permite editar codigo ni nombre"
-        )
+    def update_catalog_account(
+        account_code: str,
+        new_code: str,
+        new_name: str,
+    ) -> ACAccount:
+        normalized_code = (account_code or "").strip()
+        target_code = (new_code or "").strip()
+        target_name = (new_name or "").strip()
+
+        if not normalized_code:
+            raise ValueError("El codigo de cuenta es obligatorio")
+        if not target_code:
+            raise ValueError("El nuevo codigo de cuenta es obligatorio")
+        if not target_name:
+            raise ValueError("El nuevo nombre de cuenta es obligatorio")
+
+        account = ACAccount.query.filter_by(code=normalized_code).first()
+        if not account:
+            raise ValueError("La cuenta indicada no existe en el nomenclador general")
+
+        if account.is_normative:
+            raise ValueError(
+                "El nomenclador general es normativo y no permite editar codigo ni nombre"
+            )
+
+        duplicate = ACAccount.query.filter(
+            ACAccount.code == target_code,
+            ACAccount.id != account.id,
+        ).first()
+        if duplicate:
+            raise ValueError("Ya existe otra cuenta con el codigo indicado")
+
+        account.code = target_code
+        account.name = target_name
+        db.session.commit()
+        return account
 
     @staticmethod
     def adopt_account_by_code(
@@ -933,6 +1273,16 @@ class InventoryService:
                 "No se puede desadoptar la cuenta porque ya tiene movimientos contables asociados"
             )
 
+        active_subaccount = BusinessSubAccount.query.filter_by(
+            business_id=business_id,
+            business_account_adoption_id=adoption.id,
+            is_active=True,
+        ).first()
+        if active_subaccount:
+            raise ValueError(
+                "No se puede desadoptar la cuenta porque tiene subcuentas activas asociadas"
+            )
+
         previous_is_active = adoption.is_active
         adoption.is_active = False
         adoption.removed_at = db.func.current_timestamp()
@@ -967,6 +1317,194 @@ class InventoryService:
             raise ValueError("La cuenta no esta adoptada en este negocio")
 
         return account
+
+    @staticmethod
+    def _get_active_adoption_or_fail(
+        business_id: int,
+        account_code: str,
+    ) -> BusinessAccountAdoption:
+        account = InventoryService.validate_account_is_adopted(
+            business_id=business_id,
+            account_code=account_code,
+        )
+        adoption = BusinessAccountAdoption.query.filter_by(
+            business_id=business_id,
+            account_id=account.id,
+            is_active=True,
+        ).first()
+        if not adoption:
+            raise ValueError("La cuenta no esta adoptada en este negocio")
+        return adoption
+
+    @staticmethod
+    def list_business_subaccounts(
+        business_id: int,
+        include_inactive: bool = False,
+        account_code: str | None = None,
+    ) -> list[BusinessSubAccount]:
+        query = BusinessSubAccount.query.filter(
+            BusinessSubAccount.business_id == business_id
+        )
+        if not include_inactive:
+            query = query.filter(BusinessSubAccount.is_active.is_(True))
+
+        normalized_code = (account_code or "").strip()
+        if normalized_code:
+            adoption = InventoryService._get_active_adoption_or_fail(
+                business_id=business_id,
+                account_code=normalized_code,
+            )
+            query = query.filter(
+                BusinessSubAccount.business_account_adoption_id == adoption.id
+            )
+
+        return query.order_by(BusinessSubAccount.code.asc()).all()
+
+    @staticmethod
+    def create_business_subaccount(
+        business_id: int,
+        account_code: str,
+        code: str,
+        name: str,
+        actor: str | None = None,
+        source: str | None = "inventory_api",
+        template_subaccount_id: int | None = None,
+    ) -> BusinessSubAccount:
+        normalized_sub_code = (code or "").strip()
+        normalized_sub_name = (name or "").strip()
+        if not normalized_sub_code:
+            raise ValueError("El codigo de subcuenta es obligatorio")
+        if not normalized_sub_name:
+            raise ValueError("El nombre de subcuenta es obligatorio")
+
+        adoption = InventoryService._get_active_adoption_or_fail(
+            business_id=business_id,
+            account_code=account_code,
+        )
+
+        duplicate = BusinessSubAccount.query.filter_by(
+            business_id=business_id,
+            code=normalized_sub_code,
+        ).first()
+        if duplicate:
+            raise ValueError("Ya existe una subcuenta con ese codigo en el negocio")
+
+        subaccount = BusinessSubAccount(
+            business_id=business_id,
+            business_account_adoption_id=adoption.id,
+            template_subaccount_id=template_subaccount_id,
+            code=normalized_sub_code,
+            name=normalized_sub_name,
+            is_active=True,
+        )
+        db.session.add(subaccount)
+        db.session.commit()
+
+        InventoryService._log_business_subaccount_event(
+            business_id=business_id,
+            business_sub_account_id=subaccount.id,
+            business_account_adoption_id=adoption.id,
+            action="create",
+            actor=actor,
+            source=source,
+            previous_code=None,
+            new_code=subaccount.code,
+            previous_name=None,
+            new_name=subaccount.name,
+            previous_is_active=None,
+            new_is_active=subaccount.is_active,
+        )
+        return subaccount
+
+    @staticmethod
+    def update_business_subaccount(
+        business_id: int,
+        business_sub_account_id: int,
+        code: str | None = None,
+        name: str | None = None,
+        is_active: bool | None = None,
+        actor: str | None = None,
+        source: str | None = "inventory_api",
+    ) -> BusinessSubAccount:
+        subaccount = BusinessSubAccount.query.get_or_404(business_sub_account_id)
+        if subaccount.business_id != business_id:
+            raise ValueError("La subcuenta no pertenece al negocio")
+
+        previous_code = subaccount.code
+        previous_name = subaccount.name
+        previous_is_active = subaccount.is_active
+
+        if code is not None:
+            normalized_code = code.strip()
+            if not normalized_code:
+                raise ValueError("El codigo de subcuenta es obligatorio")
+            duplicate = BusinessSubAccount.query.filter(
+                BusinessSubAccount.business_id == business_id,
+                BusinessSubAccount.code == normalized_code,
+                BusinessSubAccount.id != subaccount.id,
+            ).first()
+            if duplicate:
+                raise ValueError("Ya existe una subcuenta con ese codigo en el negocio")
+            subaccount.code = normalized_code
+
+        if name is not None:
+            normalized_name = name.strip()
+            if not normalized_name:
+                raise ValueError("El nombre de subcuenta es obligatorio")
+            subaccount.name = normalized_name
+
+        if is_active is not None:
+            subaccount.is_active = bool(is_active)
+
+        db.session.commit()
+
+        InventoryService._log_business_subaccount_event(
+            business_id=business_id,
+            business_sub_account_id=subaccount.id,
+            business_account_adoption_id=subaccount.business_account_adoption_id,
+            action="update",
+            actor=actor,
+            source=source,
+            previous_code=previous_code,
+            new_code=subaccount.code,
+            previous_name=previous_name,
+            new_name=subaccount.name,
+            previous_is_active=previous_is_active,
+            new_is_active=subaccount.is_active,
+        )
+        return subaccount
+
+    @staticmethod
+    def _log_business_subaccount_event(
+        business_id: int,
+        business_sub_account_id: int | None,
+        business_account_adoption_id: int,
+        action: str,
+        actor: str | None,
+        source: str | None,
+        previous_code: str | None,
+        new_code: str | None,
+        previous_name: str | None,
+        new_name: str | None,
+        previous_is_active,
+        new_is_active,
+    ):
+        audit = BusinessSubAccountAudit(
+            business_id=business_id,
+            business_sub_account_id=business_sub_account_id,
+            business_account_adoption_id=business_account_adoption_id,
+            action=action,
+            actor=(actor or "").strip() or None,
+            source=(source or "").strip() or None,
+            previous_code=previous_code,
+            new_code=new_code,
+            previous_name=previous_name,
+            new_name=new_name,
+            previous_is_active=previous_is_active,
+            new_is_active=new_is_active,
+        )
+        db.session.add(audit)
+        db.session.commit()
 
     @staticmethod
     def _log_account_adoption_event(

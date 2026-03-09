@@ -203,6 +203,14 @@
         >
       </div>
       <div>
+        {% set is_active = request_path is not none and request_path.startswith(href_inventory_accounting) %}
+        <a
+          class="flex items-center gap-3 p-2 rounded {{ nav_hover_class }} {{ 'text-blue-500' if is_active else '' }}"
+          href="{{ href_inventory_accounting }}"
+          >{{ stats('w-5 h-5') }} Contabilidad Inventario</a
+        >
+      </div>
+      <div>
         <button
           type="button"
           class="{{ report_button_class }}"
