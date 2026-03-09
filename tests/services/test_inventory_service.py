@@ -49,6 +49,12 @@ class FakeColumn:
     def __le__(self, other):
         return ("le", other)
 
+    def like(self, other):
+        return ("like", other)
+
+    def asc(self):
+        return ("asc",)
+
     def desc(self):
         return ("desc",)
 
@@ -60,6 +66,34 @@ class FakeMovementModel:
 
     def __init__(self, query):
         self.query = query
+
+
+class FakeInventoryMovementQuery:
+    def __init__(self, records):
+        self._records = records
+
+    def filter(self, *args, **kwargs):
+        return self
+
+    def order_by(self, *args, **kwargs):
+        return self
+
+    def all(self):
+        return self._records
+
+    def count(self):
+        return len(self._records)
+
+
+class FakeInventoryMovementModelForCard:
+    business_id = FakeColumn()
+    inventory_item_id = FakeColumn()
+    lot_code = FakeColumn()
+    movement_date = FakeColumn()
+    id = FakeColumn()
+
+    def __init__(self, records):
+        self.query = FakeInventoryMovementQuery(records)
 
 
 class TestInventoryService(unittest.TestCase):
@@ -174,6 +208,65 @@ class TestInventoryService(unittest.TestCase):
         self.assertEqual(result, fake_result)
         self.assertEqual(len(fake_query.filter_calls), 4)
         self.assertEqual(len(fake_query.order_by_calls), 1)
+
+    def test_generate_auto_lot_code_uses_existing_count(self):
+        fake_model = FakeInventoryMovementModelForCard(
+            records=[SimpleNamespace(), SimpleNamespace()]
+        )
+
+        with patch("app.services.inventory_service.InventoryMovement", fake_model):
+            lot_code = InventoryService._generate_auto_lot_code(
+                business_id=1,
+                inventory_item_id=7,
+            )
+
+        self.assertTrue(lot_code.startswith("AUTO-"))
+        self.assertTrue(lot_code.endswith("-003"))
+
+    def test_list_stowage_card_builds_running_balance(self):
+        fake_records = [
+            SimpleNamespace(
+                id=1,
+                movement_type="purchase",
+                destination=None,
+                lot_code="LOTE-1",
+                quantity=10.0,
+                unit="kg",
+                movement_date=datetime(2026, 3, 9, 10, 0, 0),
+                account_code="7101",
+                reference_type=None,
+                reference_id=None,
+                document="FAC-1",
+                notes="entrada",
+            ),
+            SimpleNamespace(
+                id=2,
+                movement_type="transfer",
+                destination="wip",
+                lot_code="LOTE-1",
+                quantity=3.0,
+                unit="kg",
+                movement_date=datetime(2026, 3, 9, 11, 0, 0),
+                account_code="7101",
+                reference_type="wip_balance",
+                reference_id=12,
+                document=None,
+                notes="salida",
+            ),
+        ]
+        fake_model = FakeInventoryMovementModelForCard(records=fake_records)
+
+        with patch("app.services.inventory_service.InventoryMovement", fake_model):
+            rows = InventoryService.list_stowage_card(
+                business_id=3,
+                inventory_item_id=9,
+                lot_code="LOTE-1",
+            )
+
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["running_balance"], 10.0)
+        self.assertEqual(rows[1]["delta"], -3.0)
+        self.assertEqual(rows[1]["running_balance"], 7.0)
 
 
 if __name__ == "__main__":

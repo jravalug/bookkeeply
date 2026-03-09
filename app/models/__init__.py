@@ -5,9 +5,12 @@ from .product import Product, ProductDetail
 from .inventory import (
     Inventory,
     InventoryItem,
+    InventoryProductGeneric,
+    InventoryProductSpecific,
     Supply,
     InventoryMovement,
     InventoryWipBalance,
+    InventorySalesFloorStock,
 )
 from .account_classifier import (
     ACAccount,

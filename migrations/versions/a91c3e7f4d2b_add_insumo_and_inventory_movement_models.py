@@ -27,7 +27,7 @@ def upgrade():
             sa.Column("id", sa.Integer(), nullable=False),
             sa.Column("business_id", sa.Integer(), nullable=False),
             sa.Column("inventory_item_id", sa.Integer(), nullable=False),
-            sa.Column("product_surtido", sa.String(length=120), nullable=False),
+            sa.Column("product_variant", sa.String(length=120), nullable=False),
             sa.Column(
                 "is_active", sa.Boolean(), nullable=False, server_default=sa.true()
             ),
@@ -48,8 +48,8 @@ def upgrade():
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint(
                 "business_id",
-                "product_surtido",
-                name="uq_supply_business_product_surtido",
+                "product_variant",
+                name="uq_supply_business_product_variant",
             ),
         )
 

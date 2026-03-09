@@ -86,7 +86,18 @@ def supply_list(client_slug, business_slug):
                     "business_id": supply.business_id,
                     "inventory_item_id": supply.inventory_item_id,
                     "inventory_item_name": supply.inventory_item.name,
-                    "product_surtido": supply.product_surtido,
+                    "product_specific_id": supply.product_specific_id,
+                    "product_specific_name": (
+                        supply.product_specific.name
+                        if supply.product_specific
+                        else None
+                    ),
+                    "product_generic_name": (
+                        supply.product_specific.generic.name
+                        if supply.product_specific and supply.product_specific.generic
+                        else None
+                    ),
+                    "product_variant": supply.product_variant,
                     "is_active": supply.is_active,
                 }
                 for supply in supplies
@@ -108,7 +119,12 @@ def supply_create(client_slug, business_slug):
         supply = inventory_service.create_supply(
             business_id=business.id,
             inventory_item_id=int(payload.get("inventory_item_id")),
-            product_surtido=str(payload.get("product_surtido", "")),
+            product_variant=str(payload.get("product_variant", "")),
+            product_specific_id=(
+                int(payload.get("product_specific_id"))
+                if payload.get("product_specific_id") not in (None, "")
+                else None
+            ),
             is_active=str(payload.get("is_active", "true")).lower() == "true",
         )
     except (TypeError, ValueError) as exc:
@@ -122,7 +138,8 @@ def supply_create(client_slug, business_slug):
                     "id": supply.id,
                     "business_id": supply.business_id,
                     "inventory_item_id": supply.inventory_item_id,
-                    "product_surtido": supply.product_surtido,
+                    "product_specific_id": supply.product_specific_id,
+                    "product_variant": supply.product_variant,
                     "is_active": supply.is_active,
                 },
             }
@@ -145,7 +162,12 @@ def supply_update(client_slug, business_slug, supply_id):
             business_id=business.id,
             supply_id=supply_id,
             inventory_item_id=int(payload.get("inventory_item_id")),
-            product_surtido=str(payload.get("product_surtido", "")),
+            product_variant=str(payload.get("product_variant", "")),
+            product_specific_id=(
+                int(payload.get("product_specific_id"))
+                if payload.get("product_specific_id") not in (None, "")
+                else None
+            ),
             is_active=str(payload.get("is_active", "true")).lower() == "true",
         )
     except (TypeError, ValueError) as exc:
@@ -158,10 +180,114 @@ def supply_update(client_slug, business_slug, supply_id):
                 "id": supply.id,
                 "business_id": supply.business_id,
                 "inventory_item_id": supply.inventory_item_id,
-                "product_surtido": supply.product_surtido,
+                "product_specific_id": supply.product_specific_id,
+                "product_variant": supply.product_variant,
                 "is_active": supply.is_active,
             },
         }
+    )
+
+
+@bp.route("/catalog/generic/list", methods=["GET"])
+def catalog_generic_list(client_slug, business_slug):
+    try:
+        inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    include_inactive = request.args.get("include_inactive", "false").lower() == "true"
+    items = inventory_service.list_product_generics(include_inactive=include_inactive)
+    return jsonify(
+        {
+            "ok": True,
+            "items": [
+                {
+                    "id": item.id,
+                    "name": item.name,
+                    "is_active": item.is_active,
+                }
+                for item in items
+            ],
+        }
+    )
+
+
+@bp.route("/catalog/generic/create", methods=["POST"])
+def catalog_generic_create(client_slug, business_slug):
+    try:
+        inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    payload = request.get_json(silent=True) or request.form
+    try:
+        item = inventory_service.create_product_generic(
+            name=str(payload.get("name", ""))
+        )
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return jsonify({"ok": True, "item": {"id": item.id, "name": item.name}}), 201
+
+
+@bp.route("/catalog/specific/list", methods=["GET"])
+def catalog_specific_list(client_slug, business_slug):
+    try:
+        inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    include_inactive = request.args.get("include_inactive", "false").lower() == "true"
+    product_generic_id = request.args.get("product_generic_id", type=int)
+    items = inventory_service.list_product_specifics(
+        product_generic_id=product_generic_id,
+        include_inactive=include_inactive,
+    )
+    return jsonify(
+        {
+            "ok": True,
+            "items": [
+                {
+                    "id": item.id,
+                    "generic_id": item.generic_id,
+                    "generic_name": item.generic.name if item.generic else None,
+                    "name": item.name,
+                    "is_active": item.is_active,
+                }
+                for item in items
+            ],
+        }
+    )
+
+
+@bp.route("/catalog/specific/create", methods=["POST"])
+def catalog_specific_create(client_slug, business_slug):
+    try:
+        inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    payload = request.get_json(silent=True) or request.form
+    try:
+        item = inventory_service.create_product_specific(
+            product_generic_id=int(payload.get("product_generic_id")),
+            name=str(payload.get("name", "")),
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return (
+        jsonify(
+            {
+                "ok": True,
+                "item": {
+                    "id": item.id,
+                    "generic_id": item.generic_id,
+                    "name": item.name,
+                },
+            }
+        ),
+        201,
     )
 
 
@@ -213,9 +339,11 @@ def movement_list(client_slug, business_slug):
         )
 
     inventory_item_id = request.args.get("inventory_item_id", type=int)
+    lot_code = request.args.get("lot_code")
     movements = inventory_service.list_movements(
         business_id=business.id,
         inventory_item_id=inventory_item_id,
+        lot_code=lot_code,
         start_date=start_date,
         end_date=end_date,
     )
@@ -229,6 +357,7 @@ def movement_list(client_slug, business_slug):
                     "inventory_item_id": movement.inventory_item_id,
                     "movement_type": movement.movement_type,
                     "destination": movement.destination,
+                    "lot_code": movement.lot_code,
                     "quantity": movement.quantity,
                     "unit": movement.unit,
                     "account_code": movement.account_code,
@@ -285,6 +414,7 @@ def movement_create(client_slug, business_slug):
             idempotency_key=_raw("idempotency_key"),
             reference_type=_raw("reference_type"),
             reference_id=_to_int("reference_id"),
+            lot_code=_raw("lot_code"),
             document=_raw("document"),
             notes=_raw("notes"),
         )
@@ -299,6 +429,7 @@ def movement_create(client_slug, business_slug):
                     "id": movement.id,
                     "movement_type": movement.movement_type,
                     "destination": movement.destination,
+                    "lot_code": movement.lot_code,
                     "quantity": movement.quantity,
                     "unit": movement.unit,
                     "account_code": movement.account_code,
@@ -307,6 +438,179 @@ def movement_create(client_slug, business_slug):
         ),
         201,
     )
+
+
+@bp.route("/movement/stowage-card", methods=["GET"])
+def movement_stowage_card(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    inventory_item_id = request.args.get("inventory_item_id", type=int)
+    lot_code = request.args.get("lot_code")
+
+    if inventory_item_id is None:
+        return (
+            jsonify({"ok": False, "message": "inventory_item_id es obligatorio"}),
+            400,
+        )
+
+    try:
+        card_items = inventory_service.list_stowage_card(
+            business_id=business.id,
+            inventory_item_id=inventory_item_id,
+            lot_code=lot_code or "",
+        )
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return jsonify(
+        {
+            "ok": True,
+            "item": {
+                "inventory_item_id": inventory_item_id,
+                "lot_code": (lot_code or "").strip(),
+                "entries": [
+                    {
+                        "id": row["id"],
+                        "movement_type": row["movement_type"],
+                        "destination": row["destination"],
+                        "lot_code": row["lot_code"],
+                        "quantity": row["quantity"],
+                        "delta": row["delta"],
+                        "running_balance": row["running_balance"],
+                        "unit": row["unit"],
+                        "movement_date": (
+                            row["movement_date"].isoformat()
+                            if row["movement_date"]
+                            else None
+                        ),
+                        "account_code": row["account_code"],
+                        "reference_type": row["reference_type"],
+                        "reference_id": row["reference_id"],
+                        "document": row["document"],
+                        "notes": row["notes"],
+                    }
+                    for row in card_items
+                ],
+            },
+        }
+    )
+
+
+@bp.route("/sales-floor/list", methods=["GET"])
+def sales_floor_list(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    items = inventory_service.list_sales_floor_stocks(business_id=business.id)
+    return jsonify(
+        {
+            "ok": True,
+            "items": [
+                {
+                    "id": item.id,
+                    "business_id": item.business_id,
+                    "inventory_item_id": item.inventory_item_id,
+                    "inventory_item_name": (
+                        item.inventory_item.name if item.inventory_item else None
+                    ),
+                    "current_quantity": item.current_quantity,
+                    "min_quantity": item.min_quantity,
+                    "max_quantity": item.max_quantity,
+                }
+                for item in items
+            ],
+        }
+    )
+
+
+@bp.route("/sales-floor/configure", methods=["POST"])
+def sales_floor_configure(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    payload = request.get_json(silent=True) or request.form
+    try:
+        item = inventory_service.configure_sales_floor_stock(
+            business_id=business.id,
+            inventory_item_id=int(payload.get("inventory_item_id")),
+            min_quantity=float(payload.get("min_quantity", 0)),
+            max_quantity=float(payload.get("max_quantity", 0)),
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return jsonify(
+        {
+            "ok": True,
+            "item": {
+                "id": item.id,
+                "business_id": item.business_id,
+                "inventory_item_id": item.inventory_item_id,
+                "current_quantity": item.current_quantity,
+                "min_quantity": item.min_quantity,
+                "max_quantity": item.max_quantity,
+            },
+        }
+    )
+
+
+@bp.route("/sales-floor/transfer", methods=["POST"])
+def sales_floor_transfer(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    payload = request.get_json(silent=True) or request.form
+    try:
+        movement, stock = inventory_service.transfer_to_sales_floor(
+            business_id=business.id,
+            inventory_item_id=int(payload.get("inventory_item_id")),
+            quantity=float(payload.get("quantity", 0)),
+            unit=str(payload.get("unit", "")),
+            account_code=str(payload.get("account_code", "")),
+            lot_code=payload.get("lot_code"),
+            notes=payload.get("notes"),
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return (
+        jsonify(
+            {
+                "ok": True,
+                "item": {
+                    "movement_id": movement.id,
+                    "movement_type": movement.movement_type,
+                    "destination": movement.destination,
+                    "inventory_item_id": movement.inventory_item_id,
+                    "quantity": movement.quantity,
+                    "unit": movement.unit,
+                    "lot_code": movement.lot_code,
+                    "sales_floor_current_quantity": stock.current_quantity,
+                },
+            }
+        ),
+        201,
+    )
+
+
+@bp.route("/sales-floor/alerts", methods=["GET"])
+def sales_floor_alerts(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    items = inventory_service.list_sales_floor_alerts(business_id=business.id)
+    return jsonify({"ok": True, "items": items})
 
 
 @bp.route("/wip/list", methods=["GET"])

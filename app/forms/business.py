@@ -20,6 +20,16 @@ class BusinessForm(FlaskForm):
     )
     description = TextAreaField("Descripción", validators=[Optional()])
     business_activity = StringField("Actividad del negocio", validators=[Optional()])
+    inventory_flow_sales_floor_enabled = BooleanField(
+        "Habilitar flujo de exposicion",
+        default=True,
+        false_values=(False, "false", "", "n", "no", "0"),
+    )
+    inventory_flow_wip_enabled = BooleanField(
+        "Habilitar flujo WIP",
+        default=False,
+        false_values=(False, "false", "", "n", "no", "0"),
+    )
     income_entry_mode = SelectField(
         "Modo de ingresos",
         choices=[

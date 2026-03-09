@@ -81,18 +81,18 @@ Contexto operativo del negocio (aclaracion funcional vigente):
 - No se requieren ubicaciones fisicas adicionales en esta etapa.
 - Se usara una sola ubicacion de exposicion en esta etapa.
 - En exposicion pueden coexistir `mercancia_para_la_venta` (comprada a terceros) y `produccion_terminada` (elaborada), diferenciadas por su cuenta contable de origen.
-- Clasificacion de mercancias requerida: producto generico (ej. granos), producto especifico (ej. arroz), producto surtido/variante (ej. arroz largo).
+- Clasificacion de mercancias requerida: producto generico (ej. granos), producto especifico (ej. arroz), producto variante (ej. arroz largo).
 - Se creara una nueva tabla `insumos` como declaracion base del negocio, independiente de existencia fisica en inventario.
 - Cada `insumo` pertenece a un negocio especifico.
-- En `insumos` se gestionara `producto_generico` -> `producto_especifico` (relacional) y `producto_surtido` (singular/manual).
+- En `insumos` se gestionara `producto_generico` -> `producto_especifico` (relacional) y `producto_variante` (singular/manual).
 - Cardinalidad de catalogo global:
 	- `producto_generico` (global) tiene muchos `producto_especifico`.
 	- `producto_especifico` (global) pertenece a un solo `producto_generico`.
 - Cardinalidad operativa por negocio:
-	- `producto_surtido` es unico por negocio.
-	- `producto_surtido` pertenece a un solo `producto_especifico`.
-	- `producto_especifico` puede tener varios `producto_surtido`.
-- En entradas de inventario se seleccionara `producto_surtido` desde `insumos`; los campos generico/especifico se derivan de esa relacion.
+	- `producto_variante` es unico por negocio.
+	- `producto_variante` pertenece a un solo `producto_especifico`.
+	- `producto_especifico` puede tener varios `producto_variante`.
+- En entradas de inventario se seleccionara `producto_variante` desde `insumos`; los campos generico/especifico se derivan de esa relacion.
 - `insumos` sera el vinculo entre inventario y ficha tecnica (receta) de producto.
 - En traslado a exposicion, el stock de inventario general se descuenta al momento del traslado.
 - Lo que sale del almacen no regresa a almacen en esta etapa.
@@ -118,7 +118,7 @@ Contexto operativo del negocio (aclaracion funcional vigente):
 - `app/models/account_classifier.py` -> `ACAccount`, `ACSubAccount`, `ACElement` (base actual reutilizable para nomenclador).
 - `migrations/` -> pendientes nuevas migraciones para movimientos tipificados, ajustes y snapshot de stock.
 - Pendiente de modelado nuevo: tabla `insumos` y catalogos de `producto_generico`/`producto_especifico`.
-- Pendiente de modelado adicional: unicidad de `producto_surtido` por negocio.
+- Pendiente de modelado adicional: unicidad de `producto_variante` por negocio.
 - Pendiente de refactor en nomenclador: soporte de seleccion por negocio, subcuentas por negocio y auditoria de cambios.
 
 ### 3.2 Servicios de negocio
@@ -182,7 +182,7 @@ Pendiente para validacion funcional en la siguiente iteracion:
 - [x] Definir que tarjeta de estiba se controla por `item+lote`.
 - [x] Definir base de sugerencia por promedio: ventas de 7 dias.
 - [x] Definir alcance de insumos: pertenece a negocio.
-- [x] Definir cardinalidad de catalogo global (`generico` 1:N `especifico`) y surtido por negocio.
+- [x] Definir cardinalidad de catalogo global (`generico` 1:N `especifico`) y variante por negocio.
 - [x] Definir unidad de captura en receta: `unidad_base_insumo` (Opcion A).
 - [x] Definir que no existe transicion contable `produccion_terminada -> mercancia_para_la_venta`; en `va_a_exposicion=True` solo aplica cambio de ubicacion de `produccion_terminada`.
 - [x] Definir arquitectura contable: nomenclador general + seleccion de cuentas por negocio + subcuentas por negocio.
@@ -201,15 +201,15 @@ Objetivo: normalizar catalogo de materias primas para evitar duplicados y errore
 ### Entregables 1
 
 - [x] CRUD basico de `InventoryItem` disponible.
-- [ ] Validar unicidad por nombre normalizado (acentos/espacios/case).
-- [ ] Estandarizar unidades de medida con catalogo controlado.
-- [ ] Agregar estado activo/inactivo para descontinuados sin perder historial.
-- [ ] Subfase 1.1: clasificar items por tipo de uso (`venta_directa`, `insumo_produccion`, `mixto`).
-- [ ] Subfase 1.2: clasificar negocios por actividad operativa para reglas de inventario diferenciadas.
-- [ ] Subfase 1.3: modelar jerarquia de mercancias (`generico` -> `especifico` -> `surtido/variante`).
-- [ ] Subfase 1.4: separar modelo de catalogo (relacion generico-especifico) del modelo de entrada de inventario (campos directos generico/especifico/surtido por registro).
-- [ ] Subfase 1.5: crear modelo `insumos` y enlazarlo con catalogos generico/especifico/surtido.
-- [ ] Subfase 1.6: garantizar unicidad de `producto_surtido` por negocio.
+- [x] Validar unicidad por nombre normalizado (acentos/espacios/case).
+- [x] Estandarizar unidades de medida con catalogo controlado.
+- [x] Agregar estado activo/inactivo para descontinuados sin perder historial.
+- [x] Subfase 1.1: clasificar items por tipo de uso (`venta_directa`, `insumo_produccion`, `mixto`).
+- [x] Subfase 1.2: clasificar negocios por actividad operativa para reglas de inventario diferenciadas.
+- [x] Subfase 1.3: modelar jerarquia de mercancias (`generico` -> `especifico` -> `variante`).
+- [x] Subfase 1.4: separar modelo de catalogo (relacion generico-especifico) del modelo de entrada de inventario (campos directos generico/especifico/variante por registro).
+- [x] Subfase 1.5: crear modelo `insumos` y enlazarlo con catalogos generico/especifico/variante.
+- [x] Subfase 1.6: garantizar unicidad de `producto_variante` por negocio.
 
 ## Fase 2 - Kardex minimo de movimientos
 
@@ -223,8 +223,8 @@ Objetivo: registrar entradas y salidas de inventario con tipologia operacional t
 - [ ] Persistir movimientos con asiento contable asociado en valor monetario por transicion.
 - [ ] Garantizar idempotencia en movimientos generados desde ventas.
 - [ ] Exponer consulta de movimientos por item, negocio y rango de fechas.
-- [ ] Subfase 2.1: generar tarjeta de estiba por `item+lote` con saldo acumulado.
-- [ ] Subfase 2.2: generar lote automatico cuando aplique y no exista lote manual.
+- [x] Subfase 2.1: generar tarjeta de estiba por `item+lote` con saldo acumulado.
+- [x] Subfase 2.2: generar lote automatico cuando aplique y no exista lote manual.
 
 ## Fase 3 - Control de exposicion y reposicion
 
@@ -238,6 +238,12 @@ Objetivo: controlar mercancia colocada para venta directa y automatizar reposici
 - [ ] Reposicion de exposicion: ejecucion manual con sugerencia automatica.
 - [ ] Incluir doble sugerencia en alerta: `hasta_max` y `por_promedio_7_dias`.
 - [ ] Alertar quiebre y sobrestock de exposicion.
+- [x] Crear entidad de stock en exposicion por item y unica ubicacion de venta (etapa actual).
+- [x] Definir umbrales `min_exhibicion` y `max_exhibicion` por item-ubicacion.
+- [x] Implementar sugerencia de reposicion desde almacen a exposicion (manual/semiautomatica).
+- [x] Reposicion de exposicion: ejecucion manual con sugerencia automatica.
+- [x] Incluir doble sugerencia en alerta: `hasta_max` y `por_promedio_7_dias`.
+- [x] Alertar quiebre y sobrestock de exposicion.
 - [ ] Alertar bajo stock en inventario general por tipo de producto.
 - [ ] Subfase 3.1: compatibilidad con productos de tienda y negocios de venta directa.
 
@@ -400,9 +406,9 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 ### Bloque inmediato (siguiente sprint tecnico)
 
 - [ ] F1.1 Definir taxonomia de negocio y flujos activos por negocio (exposicion/WIP).
-- [ ] F1.2 Definir jerarquia de mercancias (`generico`/`especifico`/`surtido`) y catalogo de unidades.
+- [ ] F1.2 Definir jerarquia de mercancias (`generico`/`especifico`/`variante`) y catalogo de unidades.
 - [ ] F1.3 Diseñar tabla `insumos` como base de declaracion y vinculo con receta/inventario.
-- [ ] F1.4 Modelar restricciones de unicidad de surtido por negocio y relaciones de catalogo.
+- [ ] F1.4 Modelar restricciones de unicidad de variante por negocio y relaciones de catalogo.
 - [ ] F2.1 Diseñar modelo de movimiento de inventario con destino (`sales_floor`/`wip`).
 - [ ] F2.2 Confirmar lote automatico y tarjeta de estiba por `item+lote`.
 - [ ] F3.1 Modelar stock de exposicion y reglas min/max de reposicion.
@@ -420,7 +426,7 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 
 ### Paquete de arranque (ejecucion inmediata)
 
-- [x] TKT-INV-001 (`F1.3`): crear migracion de `supplies` con FK a negocio y referencia a surtido.
+- [x] TKT-INV-001 (`F1.3`): crear migracion de `supplies` con FK a negocio y referencia a variante.
 - [x] TKT-INV-002 (`F1.3`): crear modelo/servicio `Supply` y validaciones de pertenencia por negocio.
 - [x] TKT-INV-003 (`F1.3`): exponer endpoints CRUD de `supplies` con filtros por negocio y pruebas basicas.
 - [x] TKT-INV-004 (`F2.1`): crear tabla de movimientos tipificados con destino (`sales_floor`/`wip`) y referencia de origen.
@@ -436,12 +442,28 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 
 ### Definition of Done (arranque)
 
-- [ ] Cada ticket incluye migracion (si aplica), servicio, ruta/API y prueba minima automatizada.
-- [ ] Ningun ticket rompe reportes actuales de consumo (`inventory_consumption`).
-- [ ] Se ejecuta smoke en `webdev` con alta de insumo, movimiento, paso por WIP y adopcion de cuenta.
-- [ ] Toda regla de negocio nueva queda trazada en bitacora tecnica del plan.
+- [x] Cada ticket incluye migracion (si aplica), servicio, ruta/API y prueba minima automatizada.
+- [x] Ningun ticket rompe reportes actuales de consumo (`inventory_consumption`).
+- [x] Se ejecuta smoke en `webdev` con alta de insumo, movimiento, paso por WIP y adopcion de cuenta.
+- [x] Toda regla de negocio nueva queda trazada en bitacora tecnica del plan.
+
+### Relectura de estado y orden de ejecucion (2026-03-09)
+
+- [x] Relectura completa del plan para validar secuencia real de ejecucion por fases.
+- [x] Se confirma cierre del paquete de arranque (`TKT-INV-001` a `TKT-INV-013`) y su DoD.
+- [x] Se confirma deuda funcional pendiente previa a F5+: F1 (1.1, 1.2, 1.4, 1.5, 1.6), F2 (2.1, 2.2 e idempotencia ligada a ventas), F3 (exposicion/reposicion), F4 (4.2, 4.3, 4.4) y F13 (criterios DB/API/UI/Auditoria/Pruebas restantes).
+- [x] Decision de ejecucion: no saltar directamente a F5.1; cerrar primero pendientes macro de F1-F4/F13.
 
 ### Bloque siguiente
+
+- [x] F1.2 Cerrar taxonomia de negocios con reglas operativas por actividad.
+- [x] F1.4/F1.5/F1.6 Completar separacion catalogo vs entrada y unicidad operativa de `producto_variante` por negocio.
+- [x] F2.1/F2.2 Completar tarjeta de estiba por `item+lote` y lote automatico cuando aplique.
+- [x] F3.1/F3.2/F3.3 Implementar stock de exposicion y reposicion con alertas `hasta_max` y `promedio_7_dias`.
+- [ ] F4.2/F4.3/F4.4 Completar flujo de subproducto WIP y reglas de ubicacion de produccion terminada.
+- [ ] F13 (criterios pendientes) Completar validaciones DB/API/UI y cobertura de auditoria/pruebas del esquema contable.
+
+### Bloque posterior
 
 - [ ] F5.1 Implementar conversion de unidades y salida fraccionada segura.
 - [ ] F6.1 Integrar receta/ventas con consumos idempotentes y reversibles.
@@ -457,14 +479,14 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 - 2026-03-05: Se integra contexto operativo solicitado (tipos de negocio, salidas a exposicion y WIP, unidades fraccionadas y tarjeta de estiba).
 - 2026-03-05: Se contrasta plan con referencias de modelos de inventario (ABC/EOQ/min-max/JIT/ajustes/mermas) y se agregan fases/subfases nuevas.
 - 2026-03-05: Se incorporan respuestas del cuestionario: flujos configurables por negocio, reposicion sugerida/manual, FEFO+FIFO, bloqueo de negativos, precision por unidad, mermas base y evidencia opcional.
-- 2026-03-05: Se agrega requisito de clasificacion de mercancias en niveles `generico`, `especifico` y `surtido/variante`.
+- 2026-03-05: Se agrega requisito de clasificacion de mercancias en niveles `generico`, `especifico` y `variante`.
 - 2026-03-05: Se ajusta plan con nuevas definiciones: umbrales por `item-ubicacion`, WIP por defecto en restaurante/bar/cafeteria (deshabilitable), FIFO para no perecederos y precision `g`/`ml` a 2 decimales.
 - 2026-03-06: Se confirman reglas finales de trazabilidad: tarjeta por `item+lote`, lote automatico cuando aplique, no uso de lotes para no perecederos y una sola ubicacion de exposicion.
 - 2026-03-06: Se incorpora flujo de subproductos en WIP (producto intermedio que luego actua como materia prima de otras elaboraciones).
-- 2026-03-06: Se define estructura de datos de entrada con campos directos `producto_generico`, `producto_especifico` y `producto_surtido`, separada del catalogo relacional.
+- 2026-03-06: Se define estructura de datos de entrada con campos directos `producto_generico`, `producto_especifico` y `producto_variante`, separada del catalogo relacional.
 - 2026-03-06: Se define alerta con doble sugerencia de reposicion (`hasta max` y `promedio 7 dias`) y se integra uso de ficha tecnica (raciones/consumos) + bandera de subproducto en `Product`.
 - 2026-03-06: Se integra ciclo contable monetario de inventario/WIP/terminada y se planifica nueva tabla `insumos` como vinculo entre receta e inventario.
-- 2026-03-06: Se cierran cardinalidades: insumo por negocio, catalogo global generico/especifico y surtido unico por negocio con trazabilidad por documento en tarjeta de estiba.
+- 2026-03-06: Se cierran cardinalidades: insumo por negocio, catalogo global generico/especifico y variante unica por negocio con trazabilidad por documento en tarjeta de estiba.
 - 2026-03-09: Se cierra unidad de receta en `unidad_base_insumo` (Opcion A) y se corrige exposicion contable: `produccion_terminada` no pasa a `mercancia_para_la_venta`, solo cambia de ubicacion cuando `va_a_exposicion=True` (default `False`).
 - 2026-03-09: Se define arquitectura contable con nomenclador general, seleccion de cuentas por negocio, subcuentas especificas por negocio, separacion de mermas por tipo y desglose de ventas mixtas en `1586`/`1587`.
 - 2026-03-09: Se redefine el nomenclador general como base normativa inmutable (solo lectura), precargada desde Resolucion 494/2016.
@@ -483,3 +505,20 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 - 2026-03-09: Se completa el cierre contable `wip -> finished_goods` en `/wip/<id>/finish`, registrando movimiento `wip_close` con `account_code` adoptado obligatorio y referencia al balance WIP cerrado.
 - 2026-03-09: Se agregan pruebas de servicio en `tests/services/test_inventory_service.py` y pasan en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`): consumo parcial WIP, merma WIP, cierre WIP con `wip_close` y filtro de movimientos por item/rango.
 - 2026-03-09: Se agregan pruebas de rutas para CRUD de `supplies` en `tests/routes/test_inventory_supply_routes.py` (list/create/update/delete) y pasan en `webdev` junto a pruebas de servicio (`8 tests OK`).
+- 2026-03-09: Se agrega prueba de no-regresion para `report/inventory-consumption` en `tests/routes/test_reports_inventory_consumption_regression.py` (respuesta valida y validacion de `month`), preservando el reporte de consumo existente.
+- 2026-03-09: Se ejecuta smoke integral en `webdev` con `tests/smoke/test_inventory_flow_smoke.py`: adopcion de cuenta, alta de insumo, movimiento de entrada, pase a WIP y cierre `wip_close` a `finished_goods`.
+- 2026-03-09: Se ejecuta corrida consolidada de pruebas en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` y resultado `11 tests OK`, cerrando Definition of Done del paquete de arranque.
+- 2026-03-09: Se relee el plan completo y se corrige el orden de ejecucion: primero cierre de deuda macro en F1-F4/F13; F5-F10 pasan a bloque posterior para evitar saltos de fase.
+- 2026-03-09: Se ejecuta F1 en orden con migracion `f3a9b1c7d2e4`: `InventoryItem` incorpora `usage_type` e `is_active`, junto a validaciones de unidad controlada y unicidad por nombre normalizado en `InventoryService`.
+- 2026-03-09: Se agregan pruebas `tests/services/test_inventory_item_catalog_rules.py` para reglas de catalogo de items (default de tipo/activo, unidad valida, duplicado normalizado y actualizacion de tipo/estado) y pasan en `webdev` dentro de la corrida consolidada (`15 tests OK`).
+- 2026-03-09: Se ejecuta F1.2 con migracion `f4c8e1b2d3a9`: se agregan flujos operativos por negocio (`inventory_flow_sales_floor_enabled`, `inventory_flow_wip_enabled`) y defaults por actividad (WIP activo por defecto en `restaurant`, `bar`, `cafeteria`, con override manual).
+- 2026-03-09: Se agrega cobertura de reglas por actividad en `tests/services/test_business_inventory_flow_rules.py` (defaults y overrides en create/update) y la corrida consolidada en `webdev` queda en `19 tests OK`.
+- 2026-03-09: Se implementa jerarquia de catalogo `generico -> especifico` con tablas `inventory_product_generic` y `inventory_product_specific` (migracion `f5d2a1b3c4e6`) y se enlaza `Supply` con `product_specific_id`.
+- 2026-03-09: Se refuerza unicidad de `producto_variante` por negocio en modelo/migracion (`uq_supply_business_product_variant`) y se amplian APIs de inventario con endpoints de catalogo (`/catalog/generic/*`, `/catalog/specific/*`).
+- 2026-03-09: Se agregan pruebas de estructura de catalogo y enlace de `Supply` en `tests/services/test_inventory_catalog_structure.py`; corrida consolidada en `webdev` queda en `21 tests OK`.
+- 2026-03-09: Se completa el renombre transversal `product_surtido` -> `product_variant` (modelo, servicio, rutas, pruebas y migraciones de compatibilidad legacy `f5d2a1b3c4e6` + `f6a7b8c9d0e1`) y se valida en `webdev` con corrida completa `21 tests OK`.
+- 2026-03-09: Se implementa `lot_code` en `InventoryMovement` con migracion `f7b1c2d3e4f5`, autogeneracion de lote para compras sin lote manual y endpoint de tarjeta de estiba (`/movement/stowage-card`) con saldo corrido por `item+lote`.
+- 2026-03-09: Se agregan pruebas para lote/tarjeta de estiba en `tests/services/test_inventory_service.py` y `tests/routes/test_inventory_movement_routes.py`; corrida consolidada en `webdev` queda en `25 tests OK`.
+- 2026-03-09: Se implementa control de exposicion con nueva entidad `InventorySalesFloorStock` (migracion `f8a1b2c3d4e5`) y endpoints `/sales-floor/list`, `/sales-floor/configure`, `/sales-floor/transfer`, `/sales-floor/alerts`.
+- 2026-03-09: Se implementa traslado manual almacen -> exposicion con descuento inmediato en almacen via `transfer` a `sales_floor`, y alertas visuales con doble sugerencia (`hasta_max`, `promedio_7_dias`) mas indicadores de quiebre/sobrestock.
+- 2026-03-09: Se agregan pruebas para reglas y rutas de exposicion en `tests/services/test_inventory_sales_floor_rules.py` y `tests/routes/test_inventory_sales_floor_routes.py`; corrida consolidada en `webdev` queda en `30 tests OK`.

@@ -58,6 +58,8 @@ def detail_or_edit(client_slug, business_slug):
             "business_activity": business_rules_service.normalize_optional_text(
                 form.business_activity.data
             ),
+            "inventory_flow_sales_floor_enabled": form.inventory_flow_sales_floor_enabled.data,
+            "inventory_flow_wip_enabled": form.inventory_flow_wip_enabled.data,
             "income_entry_mode": form.income_entry_mode.data,
             "default_income_activity": form.default_income_activity.data,
             **fiscal_values,
@@ -135,6 +137,8 @@ def add_sub_business(client_slug, business_slug):
                 form.business_activity.data
             )
             or business.business_activity,
+            inventory_flow_sales_floor_enabled=form.inventory_flow_sales_floor_enabled.data,
+            inventory_flow_wip_enabled=form.inventory_flow_wip_enabled.data,
             income_entry_mode=form.income_entry_mode.data or default_mode,
             default_income_activity=form.default_income_activity.data
             or default_activity,

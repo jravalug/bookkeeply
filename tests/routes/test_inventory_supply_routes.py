@@ -24,7 +24,9 @@ class TestInventorySupplyRoutes(unittest.TestCase):
             business_id=1,
             inventory_item_id=7,
             inventory_item=SimpleNamespace(name="Azucar"),
-            product_surtido="Azucar blanca",
+            product_specific_id=None,
+            product_specific=None,
+            product_variant="Azucar blanca",
             is_active=True,
         )
 
@@ -53,7 +55,8 @@ class TestInventorySupplyRoutes(unittest.TestCase):
             id=33,
             business_id=4,
             inventory_item_id=8,
-            product_surtido="Harina 000",
+            product_specific_id=None,
+            product_variant="Harina 000",
             is_active=True,
         )
 
@@ -68,7 +71,7 @@ class TestInventorySupplyRoutes(unittest.TestCase):
                 "/clients/cliente-demo/business/negocio-demo/inventory/supply/create",
                 json={
                     "inventory_item_id": 8,
-                    "product_surtido": "Harina 000",
+                    "product_variant": "Harina 000",
                     "is_active": "true",
                 },
             )
@@ -80,7 +83,8 @@ class TestInventorySupplyRoutes(unittest.TestCase):
         create_supply_mock.assert_called_once_with(
             business_id=4,
             inventory_item_id=8,
-            product_surtido="Harina 000",
+            product_variant="Harina 000",
+            product_specific_id=None,
             is_active=True,
         )
 
@@ -90,7 +94,8 @@ class TestInventorySupplyRoutes(unittest.TestCase):
             id=44,
             business_id=5,
             inventory_item_id=9,
-            product_surtido="Leche entera",
+            product_specific_id=None,
+            product_variant="Leche entera",
             is_active=False,
         )
 
@@ -105,7 +110,7 @@ class TestInventorySupplyRoutes(unittest.TestCase):
                 "/clients/cliente-demo/business/negocio-demo/inventory/supply/44/update",
                 json={
                     "inventory_item_id": 9,
-                    "product_surtido": "Leche entera",
+                    "product_variant": "Leche entera",
                     "is_active": "false",
                 },
             )
@@ -118,7 +123,8 @@ class TestInventorySupplyRoutes(unittest.TestCase):
             business_id=5,
             supply_id=44,
             inventory_item_id=9,
-            product_surtido="Leche entera",
+            product_variant="Leche entera",
+            product_specific_id=None,
             is_active=False,
         )
 

@@ -58,12 +58,25 @@ class InventoryExtraction(db.Model):
 
 
 class InventoryItem(db.Model):
+    USAGE_TYPE_SALE_DIRECT = "sale_direct"
+    USAGE_TYPE_PRODUCTION_INPUT = "production_input"
+    USAGE_TYPE_MIXED = "mixed"
+
     id = db.Column(db.Integer, primary_key=True)
     sku = db.Column(db.String(50), unique=True, nullable=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     unit = db.Column(
         db.String(20), nullable=False
     )  # Ejemplo: "kg", "litros", "unidades"
+    usage_type = db.Column(
+        db.String(30),
+        nullable=False,
+        default=USAGE_TYPE_MIXED,
+        server_default=USAGE_TYPE_MIXED,
+    )
+    is_active = db.Column(
+        db.Boolean, nullable=False, default=True, server_default=db.true()
+    )
     stock = db.Column(db.Float, default=0.0)  # Cantidad disponible en inventario
     min_stock = db.Column(db.Float, nullable=True)
     expiration_date = db.Column(db.Date, nullable=True)
@@ -72,6 +85,75 @@ class InventoryItem(db.Model):
 
     # Relación con ProductDetail
     products = db.relationship("ProductDetail", back_populates="raw_material")
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "usage_type IN ('sale_direct', 'production_input', 'mixed')",
+            name="ck_inventory_item_usage_type",
+        ),
+    )
+
+
+class InventoryProductGeneric(db.Model):
+    __tablename__ = "inventory_product_generic"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False, unique=True)
+    is_active = db.Column(
+        db.Boolean, nullable=False, default=True, server_default=db.true()
+    )
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp(),
+    )
+
+
+class InventoryProductSpecific(db.Model):
+    __tablename__ = "inventory_product_specific"
+
+    id = db.Column(db.Integer, primary_key=True)
+    generic_id = db.Column(
+        db.Integer,
+        db.ForeignKey("inventory_product_generic.id"),
+        nullable=False,
+        index=True,
+    )
+    name = db.Column(db.String(120), nullable=False)
+    is_active = db.Column(
+        db.Boolean, nullable=False, default=True, server_default=db.true()
+    )
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp(),
+    )
+
+    generic = db.relationship(
+        "InventoryProductGeneric",
+        foreign_keys=[generic_id],
+        backref="specifics",
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "generic_id",
+            "name",
+            name="uq_inventory_product_specific_generic_name",
+        ),
+    )
 
 
 class Supply(db.Model):
@@ -90,7 +172,13 @@ class Supply(db.Model):
         nullable=False,
         index=True,
     )
-    product_surtido = db.Column(db.String(120), nullable=False)
+    product_specific_id = db.Column(
+        db.Integer,
+        db.ForeignKey("inventory_product_specific.id"),
+        nullable=True,
+        index=True,
+    )
+    product_variant = db.Column(db.String(120), nullable=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(
         db.DateTime,
@@ -111,6 +199,19 @@ class Supply(db.Model):
         "InventoryItem",
         foreign_keys=[inventory_item_id],
         backref="supply_links",
+    )
+    product_specific = db.relationship(
+        "InventoryProductSpecific",
+        foreign_keys=[product_specific_id],
+        backref="supplies",
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "business_id",
+            "product_variant",
+            name="uq_supply_business_product_variant",
+        ),
     )
 
 
@@ -136,6 +237,7 @@ class InventoryMovement(db.Model):
     )
     movement_type = db.Column(db.String(30), nullable=False, index=True)
     destination = db.Column(db.String(30), nullable=True, index=True)
+    lot_code = db.Column(db.String(80), nullable=True, index=True)
     quantity = db.Column(db.Float, nullable=False)
     unit = db.Column(db.String(20), nullable=False)
     unit_cost = db.Column(db.Float, nullable=True)
@@ -231,4 +333,55 @@ class InventoryWipBalance(db.Model):
         "Inventory",
         foreign_keys=[source_inventory_id],
         backref="wip_balances",
+    )
+
+
+class InventorySalesFloorStock(db.Model):
+    __tablename__ = "inventory_sales_floor_stock"
+
+    id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("business.id"),
+        nullable=False,
+        index=True,
+    )
+    inventory_item_id = db.Column(
+        db.Integer,
+        db.ForeignKey("inventory_item.id"),
+        nullable=False,
+        index=True,
+    )
+    current_quantity = db.Column(db.Float, nullable=False, default=0.0)
+    min_quantity = db.Column(db.Float, nullable=False, default=0.0)
+    max_quantity = db.Column(db.Float, nullable=False, default=0.0)
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp(),
+    )
+
+    business = db.relationship(
+        "Business",
+        foreign_keys=[business_id],
+        backref="sales_floor_stocks",
+    )
+    inventory_item = db.relationship(
+        "InventoryItem",
+        foreign_keys=[inventory_item_id],
+        backref="sales_floor_stocks",
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "business_id",
+            "inventory_item_id",
+            name="uq_sales_floor_stock_business_item",
+        ),
     )

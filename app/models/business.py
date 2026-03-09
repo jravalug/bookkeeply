@@ -21,6 +21,21 @@ class Business(db.Model):
     INCOME_ACTIVITY_SALE = "sale"
     INCOME_ACTIVITY_SERVICE = "service"
 
+    ACTIVITY_RETAIL = "retail"
+    ACTIVITY_RESTAURANT = "restaurant"
+    ACTIVITY_BAR = "bar"
+    ACTIVITY_CAFETERIA = "cafeteria"
+    ACTIVITY_BEAUTY = "beauty"
+    ACTIVITY_RENTAL = "rental"
+    ACTIVITY_SERVICE = "service"
+    ACTIVITY_OTHER = "other"
+
+    ACTIVITIES_WITH_WIP_BY_DEFAULT = {
+        ACTIVITY_RESTAURANT,
+        ACTIVITY_BAR,
+        ACTIVITY_CAFETERIA,
+    }
+
     # Campos principales
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(
@@ -35,6 +50,20 @@ class Business(db.Model):
     )
     business_activity = db.Column(
         db.String(120), nullable=True, comment="Actividad del negocio"
+    )
+    inventory_flow_sales_floor_enabled = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True,
+        server_default=db.true(),
+        comment="Habilita flujo de traslado a exposicion",
+    )
+    inventory_flow_wip_enabled = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default=db.false(),
+        comment="Habilita flujo de produccion en proceso (WIP)",
     )
     income_entry_mode = db.Column(
         db.String(30),

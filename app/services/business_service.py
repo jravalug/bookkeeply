@@ -25,6 +25,62 @@ class BusinessService:
                 )
             setattr(business, key, value)
 
+    @staticmethod
+    def _normalize_business_activity(value):
+        normalized = (value or "").strip().lower()
+        return normalized or None
+
+    @staticmethod
+    def _coerce_optional_bool(value):
+        if value is None:
+            return None
+        if isinstance(value, bool):
+            return value
+        normalized = str(value).strip().lower()
+        return normalized in {"1", "true", "yes", "on", "si", "s"}
+
+    @staticmethod
+    def _resolve_inventory_flow_defaults(activity: str | None):
+        enable_sales_floor = True
+        enable_wip = activity in Business.ACTIVITIES_WITH_WIP_BY_DEFAULT
+        return enable_sales_floor, enable_wip
+
+    @staticmethod
+    def _apply_inventory_flow_rules(
+        kwargs: dict, current_business: Business | None = None
+    ):
+        normalized_activity = BusinessService._normalize_business_activity(
+            kwargs.get("business_activity")
+            if "business_activity" in kwargs
+            else (current_business.business_activity if current_business else None)
+        )
+
+        if "business_activity" in kwargs:
+            kwargs["business_activity"] = normalized_activity
+
+        explicit_sales_floor = BusinessService._coerce_optional_bool(
+            kwargs.get("inventory_flow_sales_floor_enabled")
+        )
+        explicit_wip = BusinessService._coerce_optional_bool(
+            kwargs.get("inventory_flow_wip_enabled")
+        )
+
+        default_sales_floor, default_wip = (
+            BusinessService._resolve_inventory_flow_defaults(normalized_activity)
+        )
+
+        if explicit_sales_floor is not None:
+            kwargs["inventory_flow_sales_floor_enabled"] = explicit_sales_floor
+        elif "inventory_flow_sales_floor_enabled" not in kwargs:
+            kwargs["inventory_flow_sales_floor_enabled"] = default_sales_floor
+
+        if explicit_wip is not None:
+            kwargs["inventory_flow_wip_enabled"] = explicit_wip
+        elif "inventory_flow_wip_enabled" not in kwargs:
+            kwargs["inventory_flow_wip_enabled"] = default_wip
+
+        return kwargs
+
     def create_business(self, **kwargs):
         """
         Crea un nuevo negocio en la base de datos.
@@ -34,6 +90,7 @@ class BusinessService:
         """
         try:
             self._validate_required_fields(kwargs, ["name"])
+            kwargs = self._apply_inventory_flow_rules(kwargs)
             new_business = Business(**kwargs)
             db.session.add(new_business)
             db.session.commit()
@@ -52,6 +109,7 @@ class BusinessService:
         :return: El objeto `Business` actualizado.
         """
         try:
+            kwargs = self._apply_inventory_flow_rules(kwargs, current_business=business)
             self._apply_business_updates(business, kwargs)
             db.session.commit()
             return business
