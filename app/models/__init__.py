@@ -36,3 +36,4 @@ from .cash_subaccount_balance import CashSubaccountBalance
 from .cash_subaccount_movement import CashSubaccountMovement
 from .cash_change_denomination import CashChangeDenomination
 from .business_cash_fund_config import BusinessCashFundConfig
+from .user import User
