@@ -5,6 +5,7 @@ from .product import Product, ProductDetail
 from .inventory import (
     Inventory,
     InventoryItem,
+    InventoryUnitConversion,
     InventoryProductGeneric,
     InventoryProductSpecific,
     Supply,
@@ -13,6 +14,7 @@ from .inventory import (
     InventorySalesFloorStock,
     InventoryLedgerEntry,
     InventorySaleCostBreakdown,
+    InventoryCycleCount,
 )
 from .account_classifier import (
     ACAccount,

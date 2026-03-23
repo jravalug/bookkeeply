@@ -1,0 +1,12 @@
+<div id="inventory-items-panel">
+  {% if inline_message %}
+    {% set message_class = 'bg-green-100 text-green-800 border-green-300' if inline_message_type == 'success' else 'bg-red-100 text-red-800 border-red-300' %}
+    <div class="container mx-auto px-4 mt-4">
+      <div class="rounded-lg border px-4 py-3 text-sm {{ message_class }}">
+        {{ inline_message }}
+      </div>
+    </div>
+  {% endif %}
+  {% include 'inventory/partials/_item_form.html' %}
+  {% include 'inventory/partials/_item_table.html' %}
+</div>

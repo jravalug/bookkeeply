@@ -20,12 +20,15 @@ from app.models import (
     DailyIncome,
     IncomeEvent,
     CollectionReceipt,
+    InventoryItem,
+    InventoryMovement,
 )
 from app.models.business import Business
 from app.repositories.income_repository import IncomeRepository
 from app.services.business_service import BusinessService
 from app.services.income_posting_service import IncomePostingService
 from app.services.cash_flow_service import CashFlowService
+from app.services.inventory_service import InventoryService
 from app.utils.slug_utils import get_business_by_slugs
 from app.utils.income_utils import calculate_month_totals, group_sales_by_month
 
@@ -53,6 +56,8 @@ class IncomeManagementService:
     ALLOWED_PAYMENT_METHODS = {"cash", "transfer", "check"}
     TRANSFER_LIKE_METHODS = {"transfer", "check"}
     DEBTOR_TYPES = {"natural", "legal"}
+    INVENTORY_SALE_LINE_REFERENCE_TYPE = "sale_inventory_line"
+    INVENTORY_SYNC_QUANTITY_EPSILON = 1e-6
 
     def __init__(self):
         """Inicializa dependencias del servicio de ventas."""
@@ -865,7 +870,9 @@ class IncomeManagementService:
             "specific_business_id": specific_business_id,
             **debtor_data,
         }
-        return self.repository.add_sale(business_filter["business_id"], **data)
+        income = self.repository.add_sale(business_filter["business_id"], **data)
+        self._sync_inventory_for_sale(income)
+        return income
 
     def add_sale(self, business: Business, form: IncomeForm) -> Sale:
         """Alias temporal para compatibilidad retroactiva."""
@@ -903,7 +910,9 @@ class IncomeManagementService:
             **debtor_data,
         }
 
-        return self.repository.update_sale(income, **data)
+        updated_income = self.repository.update_sale(income, **data)
+        self._sync_inventory_for_sale(updated_income)
+        return updated_income
 
     def update_sale(self, sale: Sale, form: IncomeForm):
         """Alias temporal para compatibilidad retroactiva."""
@@ -925,7 +934,7 @@ class IncomeManagementService:
         """
         product = Product.query.get_or_404(product_id)
 
-        return self.repository.add_sale_detail(
+        sale_detail = self.repository.add_sale_detail(
             sale_id=income.id,
             product_id=product_id,
             quantity=quantity,
@@ -935,6 +944,8 @@ class IncomeManagementService:
                 product.price, quantity, discount
             ),
         )
+        self._sync_inventory_for_sale_detail(income, sale_detail)
+        return sale_detail
 
     def add_product_to_sale(
         self, sale: Sale, product_id: int, quantity: int, discount: float
@@ -966,7 +977,7 @@ class IncomeManagementService:
         else:
             unit_price = sale_detail.product.price
 
-        return self.repository.update_sale_detail(
+        updated_detail = self.repository.update_sale_detail(
             sale_id=income.id,
             sale_detail_id=sale_detail.id,
             quantity=quantity,
@@ -976,6 +987,8 @@ class IncomeManagementService:
                 unit_price, quantity, discount
             ),
         )
+        self._sync_inventory_for_sale_detail(income, updated_detail)
+        return updated_detail
 
     def update_sale_detail(
         self,
@@ -999,9 +1012,329 @@ class IncomeManagementService:
         Returns:
             Product: El objeto Product que se eliminó de la venta.
         """
+        self._sync_inventory_for_sale_detail(
+            sale=income,
+            sale_detail=sale_detail,
+            force_reset=True,
+        )
         removed_product = Product.query.get_or_404(sale_detail.product_id)
         self.repository.remove_sale_detail(income.id, sale_detail.id)
         return removed_product
+
+    def _sale_should_apply_inventory_consumption(self, sale: Sale) -> bool:
+        status = (getattr(sale, "status", "") or "").strip().lower()
+        is_excluded = bool(getattr(sale, "excluded", False))
+        return status == "completed" and not is_excluded
+
+    def _resolve_inventory_account_code_for_sale(self, sale: Sale) -> str:
+        adoptions = InventoryService.list_account_adoptions(
+            business_id=sale.business_id,
+            include_inactive=False,
+        )
+        for adoption in adoptions:
+            code = (
+                getattr(getattr(adoption, "account", None), "code", "") or ""
+            ).strip()
+            if code:
+                return code
+
+        raise ValueError(
+            "No hay cuentas contables adoptadas para sincronizar consumo de inventario"
+        )
+
+    def _build_desired_consumption_by_item_for_sale_detail(
+        self,
+        sale: Sale,
+        sale_detail: SaleDetail,
+    ) -> dict[int, float]:
+        desired: dict[int, float] = {}
+        sold_quantity = float(getattr(sale_detail, "quantity", 0.0) or 0.0)
+        if sold_quantity <= 0:
+            return desired
+
+        self._validate_sale_detail_recipe_integrity_for_inventory_sync(sale_detail)
+
+        product = getattr(sale_detail, "product", None)
+
+        for recipe_line in getattr(product, "raw_materials", []) or []:
+            item_id, quantity_per_sale_unit = (
+                self._resolve_recipe_line_consumption_in_item_base_unit(
+                    sale=sale,
+                    sale_detail=sale_detail,
+                    recipe_line=recipe_line,
+                )
+            )
+
+            desired[item_id] = round(
+                float(desired.get(item_id, 0.0))
+                + (sold_quantity * float(quantity_per_sale_unit)),
+                4,
+            )
+
+        return desired
+
+    def _resolve_recipe_line_consumption_in_item_base_unit(
+        self,
+        sale: Sale,
+        sale_detail: SaleDetail,
+        recipe_line,
+    ) -> tuple[int, float]:
+        raw_material = getattr(recipe_line, "raw_material", None)
+        raw_material_id = getattr(recipe_line, "raw_material_id", None)
+        if raw_material_id is None and raw_material is not None:
+            raw_material_id = getattr(raw_material, "id", None)
+        if raw_material_id is None:
+            raise ValueError("Linea de receta sin materia prima asociada")
+
+        if raw_material is None:
+            raw_material = InventoryItem.query.get(raw_material_id)
+        if raw_material is None:
+            raise ValueError(
+                f"Materia prima inexistente en receta (inventory_item_id={raw_material_id})"
+            )
+
+        product = getattr(sale_detail, "product", None)
+        product_name = (
+            getattr(product, "name", None) or f"#{getattr(product, 'id', 'N/A')}"
+        ).strip()
+        detail_id = getattr(sale_detail, "id", None)
+
+        quantity_per_unit = float(getattr(recipe_line, "quantity", 0.0) or 0.0)
+        if quantity_per_unit <= 0:
+            raise ValueError(
+                f"Receta incompleta para producto '{product_name}': la cantidad por unidad de una materia prima debe ser mayor que cero"
+            )
+
+        batch_size = float(getattr(product, "batch_size", 0.0) or 0.0)
+        is_batch_prepared = bool(getattr(product, "is_batch_prepared", False))
+        effective_quantity_per_sale_unit = quantity_per_unit
+        if is_batch_prepared and batch_size > 0:
+            effective_quantity_per_sale_unit = quantity_per_unit / batch_size
+
+        recipe_unit = (
+            getattr(recipe_line, "unit_base_insumo", None)
+            or getattr(recipe_line, "unit", None)
+            or getattr(raw_material, "unit", None)
+            or ""
+        )
+        recipe_unit = str(recipe_unit).strip().lower()
+        if not recipe_unit:
+            raise ValueError(
+                f"Receta incompleta para producto '{product_name}': la unidad de consumo de materia prima es obligatoria"
+            )
+
+        try:
+            resolved_quantity, _, _, _ = (
+                InventoryService._resolve_quantity_in_item_base_unit(
+                    business_id=sale.business_id,
+                    inventory_item=raw_material,
+                    quantity=effective_quantity_per_sale_unit,
+                    unit=recipe_unit,
+                )
+            )
+        except ValueError as exc:
+            raise ValueError(
+                f"No se pudo resolver conversion de unidad en receta para '{product_name}' "
+                f"(detalle #{detail_id}, materia_prima_id={raw_material_id}): {exc}"
+            ) from exc
+
+        return int(raw_material_id), float(resolved_quantity)
+
+    def _validate_sale_detail_recipe_integrity_for_inventory_sync(
+        self,
+        sale_detail: SaleDetail,
+    ) -> None:
+        detail_id = getattr(sale_detail, "id", None)
+        product = getattr(sale_detail, "product", None)
+        if not product:
+            raise ValueError(
+                f"Receta incompleta en detalle #{detail_id}: no hay producto asociado"
+            )
+
+        product_name = (
+            getattr(product, "name", None) or f"#{getattr(product, 'id', 'N/A')}"
+        ).strip()
+        raw_materials = list(getattr(product, "raw_materials", []) or [])
+        if not raw_materials:
+            raise ValueError(
+                f"Receta incompleta para producto '{product_name}': no tiene materias primas configuradas"
+            )
+
+        for recipe_line in raw_materials:
+            quantity_per_unit = float(getattr(recipe_line, "quantity", 0.0) or 0.0)
+            if quantity_per_unit <= 0:
+                raise ValueError(
+                    f"Receta incompleta para producto '{product_name}': la cantidad por unidad de una materia prima debe ser mayor que cero"
+                )
+
+            raw_material = getattr(recipe_line, "raw_material", None)
+            raw_material_id = getattr(recipe_line, "raw_material_id", None)
+            if raw_material_id is None and raw_material is not None:
+                raw_material_id = getattr(raw_material, "id", None)
+
+            if raw_material_id is None:
+                raise ValueError(
+                    f"Receta incompleta para producto '{product_name}': existe una linea sin materia prima asociada"
+                )
+
+            if raw_material is None:
+                existing_item = InventoryItem.query.get(raw_material_id)
+                if existing_item is None:
+                    raise ValueError(
+                        f"Materia prima inexistente en receta de '{product_name}' (inventory_item_id={raw_material_id})"
+                    )
+
+    def _validate_sale_recipe_integrity_for_inventory_sync(self, sale: Sale) -> None:
+        errors: list[str] = []
+        for sale_detail in getattr(sale, "products", []) or []:
+            try:
+                self._validate_sale_detail_recipe_integrity_for_inventory_sync(
+                    sale_detail
+                )
+            except ValueError as exc:
+                errors.append(str(exc))
+
+        if errors:
+            raise ValueError("; ".join(errors))
+
+    def _calculate_synced_consumption_by_item_for_sale_detail(
+        self,
+        sale: Sale,
+        sale_detail: SaleDetail,
+    ) -> dict[int, float]:
+        rows = (
+            InventoryMovement.query.filter(
+                InventoryMovement.business_id == sale.business_id,
+                InventoryMovement.reference_type
+                == self.INVENTORY_SALE_LINE_REFERENCE_TYPE,
+                InventoryMovement.reference_id == sale_detail.id,
+            )
+            .order_by(InventoryMovement.id.asc())
+            .all()
+        )
+
+        synced: dict[int, float] = {}
+        for row in rows:
+            item_id = int(getattr(row, "inventory_item_id", 0) or 0)
+            if item_id <= 0:
+                continue
+            delta = InventoryService._movement_stock_delta(
+                movement_type=(getattr(row, "movement_type", "") or "").strip().lower(),
+                quantity=float(getattr(row, "quantity", 0.0) or 0.0),
+                adjustment_kind=(getattr(row, "adjustment_kind", "") or "")
+                .strip()
+                .lower()
+                or None,
+            )
+            synced[item_id] = round(
+                float(synced.get(item_id, 0.0)) + (-float(delta)), 4
+            )
+
+        return synced
+
+    def _sync_inventory_for_sale(self, sale: Sale) -> None:
+        if self._sale_should_apply_inventory_consumption(sale):
+            self._validate_sale_recipe_integrity_for_inventory_sync(sale)
+
+        for sale_detail in getattr(sale, "products", []) or []:
+            self._sync_inventory_for_sale_detail(sale=sale, sale_detail=sale_detail)
+
+    def _sync_inventory_for_sale_detail(
+        self,
+        sale: Sale,
+        sale_detail: SaleDetail,
+        force_reset: bool = False,
+    ) -> None:
+        desired_consumption_by_item: dict[int, float] = {}
+        if not force_reset and self._sale_should_apply_inventory_consumption(sale):
+            desired_consumption_by_item = (
+                self._build_desired_consumption_by_item_for_sale_detail(
+                    sale=sale,
+                    sale_detail=sale_detail,
+                )
+            )
+
+        synced_consumption_by_item = (
+            self._calculate_synced_consumption_by_item_for_sale_detail(
+                sale=sale,
+                sale_detail=sale_detail,
+            )
+        )
+
+        item_ids = sorted(
+            set(desired_consumption_by_item.keys())
+            | set(synced_consumption_by_item.keys())
+        )
+        if not item_ids:
+            return
+
+        item_rows = InventoryItem.query.filter(InventoryItem.id.in_(item_ids)).all()
+        items_by_id = {int(item.id): item for item in item_rows}
+
+        operations = []
+        for item_id in item_ids:
+            desired = float(desired_consumption_by_item.get(item_id, 0.0) or 0.0)
+            synced = float(synced_consumption_by_item.get(item_id, 0.0) or 0.0)
+            delta = round(desired - synced, 4)
+            if abs(delta) <= self.INVENTORY_SYNC_QUANTITY_EPSILON:
+                continue
+
+            item = items_by_id.get(item_id)
+            if item is None:
+                raise ValueError(
+                    f"Materia prima inexistente para sincronizacion de inventario (id={item_id})"
+                )
+
+            operations.append(
+                {
+                    "item": item,
+                    "item_id": item_id,
+                    "delta": delta,
+                    "desired": desired,
+                }
+            )
+
+        if not operations:
+            return
+
+        account_code = self._resolve_inventory_account_code_for_sale(sale)
+
+        for operation in operations:
+            item = operation["item"]
+            item_id = operation["item_id"]
+            delta = operation["delta"]
+            desired = operation["desired"]
+            base_idempotency_key = (
+                f"sale-line-sync:{sale.id}:{sale_detail.id}:{item_id}:{desired:.4f}"
+            )
+
+            if delta > 0:
+                InventoryService.create_movement(
+                    business_id=sale.business_id,
+                    inventory_item_id=item_id,
+                    movement_type="consumption",
+                    quantity=round(delta, 4),
+                    unit=(getattr(item, "unit", "") or "").strip().lower(),
+                    account_code=account_code,
+                    idempotency_key=f"{base_idempotency_key}:consume",
+                    reference_type=self.INVENTORY_SALE_LINE_REFERENCE_TYPE,
+                    reference_id=sale_detail.id,
+                    notes=f"Consumo automatico por venta #{sale.id} detalle #{sale_detail.id}",
+                )
+            else:
+                InventoryService.create_movement(
+                    business_id=sale.business_id,
+                    inventory_item_id=item_id,
+                    movement_type="adjustment",
+                    adjustment_kind="positive",
+                    quantity=round(abs(delta), 4),
+                    unit=(getattr(item, "unit", "") or "").strip().lower(),
+                    account_code=account_code,
+                    idempotency_key=f"{base_idempotency_key}:restore",
+                    reference_type=self.INVENTORY_SALE_LINE_REFERENCE_TYPE,
+                    reference_id=sale_detail.id,
+                    notes=f"Reversa automatica por venta #{sale.id} detalle #{sale_detail.id}",
+                )
 
     def remove_product_from_sale(self, sale: Sale, sale_detail: SaleDetail) -> Product:
         """Alias temporal para compatibilidad retroactiva."""

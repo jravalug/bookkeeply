@@ -35,7 +35,12 @@ class TestInventoryFlowSmoke(unittest.TestCase):
 
     def test_smoke_inventory_wip_and_account_adoption_flow(self):
         client = Client(name="Cliente Smoke")
-        business = Business(name="Negocio Smoke", client=client)
+        business = Business(
+            name="Negocio Smoke",
+            client=client,
+            business_activity=Business.ACTIVITY_RESTAURANT,
+            inventory_flow_wip_enabled=True,
+        )
         item = InventoryItem(name="Insumo Smoke", unit="kg", stock=0)
         account = ACAccount(code="7101", name="Produccion en proceso")
         db.session.add_all([client, business, item, account])
@@ -64,6 +69,7 @@ class TestInventoryFlowSmoke(unittest.TestCase):
             quantity=12,
             unit="kg",
             account_code="7101",
+            document="FAC-SMOKE-001",
             notes="entrada inicial smoke",
         )
         self.assertEqual(purchase.movement_type, "purchase")
@@ -90,7 +96,9 @@ class TestInventoryFlowSmoke(unittest.TestCase):
 
         movement_types = {
             movement.movement_type
-            for movement in InventoryMovement.query.filter_by(business_id=business.id).all()
+            for movement in InventoryMovement.query.filter_by(
+                business_id=business.id
+            ).all()
         }
         self.assertIn("purchase", movement_types)
         self.assertIn("transfer", movement_types)

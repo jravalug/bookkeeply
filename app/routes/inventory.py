@@ -14,48 +14,95 @@ inventory_service = InventoryService()
 
 @bp.route("/item/list", methods=["GET", "POST"])
 def item_list(client_slug, business_slug):
+    is_htmx_request = request.headers.get("HX-Request") == "true"
     try:
         business = inventory_service.resolve_business(client_slug, business_slug)
     except ValueError:
         return redirect(url_for("client.list_clients"))
 
     form = InventoryItemForm()
+    inline_message = None
+    inline_message_type = None
 
     if form.validate_on_submit():
-        inventory_service.create_item(name=form.name.data, unit=form.unit.data)
-
-        flash("Articulo de inventario agregado correctamente", "success")
-        return redirect(
-            url_for(
-                "inventory.item_list",
-                client_slug=business.client.slug,
-                business_slug=business.slug,
-            )
-        )
+        try:
+            inventory_service.create_item(name=form.name.data, unit=form.unit.data)
+            inline_message = "Articulo de inventario agregado correctamente"
+            inline_message_type = "success"
+            flash(inline_message, "success")
+            if not is_htmx_request:
+                return redirect(
+                    url_for(
+                        "inventory.item_list",
+                        client_slug=business.client.slug,
+                        business_slug=business.slug,
+                    )
+                )
+        except ValueError as exc:
+            inline_message = str(exc)
+            inline_message_type = "error"
+            flash(inline_message, "danger")
+    elif request.method == "POST":
+        first_error = next(iter(form.errors.values()), ["Datos invalidos"])[0]
+        inline_message = first_error
+        inline_message_type = "error"
 
     inventory_items_list = inventory_service.get_all_items()
 
+    template_context = {
+        "business": business,
+        "inventory_items": inventory_items_list,
+        "form": form,
+        "inline_message": inline_message,
+        "inline_message_type": inline_message_type,
+    }
+
+    if is_htmx_request:
+        return render_template(
+            "inventory/partials/_item_panel.html", **template_context
+        )
+
     return render_template(
         "inventory/item_list.html",
-        business=business,
-        inventory_items=inventory_items_list,
-        form=form,
+        **template_context,
     )
 
 
 @bp.route("/<int:inventory_item_id>", methods=["POST"])
 def item_update(client_slug, business_slug, inventory_item_id):
+    is_htmx_request = request.headers.get("HX-Request") == "true"
     try:
         business = inventory_service.resolve_business(client_slug, business_slug)
     except ValueError:
         return redirect(url_for("client.list_clients"))
 
-    inventory_service.update_item(
-        inventory_item_id=inventory_item_id,
-        name=request.form["name"],
-        unit=request.form["unit"],
-    )
-    flash("Articulo de inventario actualizado correctamente", "success")
+    inline_message = "Articulo de inventario actualizado correctamente"
+    inline_message_type = "success"
+
+    try:
+        inventory_service.update_item(
+            inventory_item_id=inventory_item_id,
+            name=request.form["name"],
+            unit=request.form["unit"],
+        )
+        flash(inline_message, "success")
+    except ValueError as exc:
+        inline_message = str(exc)
+        inline_message_type = "error"
+        flash(inline_message, "danger")
+
+    if is_htmx_request:
+        form = InventoryItemForm()
+        inventory_items_list = inventory_service.get_all_items()
+        return render_template(
+            "inventory/partials/_item_panel.html",
+            business=business,
+            inventory_items=inventory_items_list,
+            form=form,
+            inline_message=inline_message,
+            inline_message_type=inline_message_type,
+        )
+
     return redirect(
         url_for(
             "inventory.item_list",
@@ -67,10 +114,14 @@ def item_update(client_slug, business_slug, inventory_item_id):
 
 @bp.route("/accounting/manage", methods=["GET", "POST"])
 def accounting_manage(client_slug, business_slug):
+    is_htmx_request = request.headers.get("HX-Request") == "true"
     try:
         business = inventory_service.resolve_business(client_slug, business_slug)
     except ValueError:
         return redirect(url_for("client.list_clients"))
+
+    inline_message = None
+    inline_message_type = None
 
     if request.method == "POST":
         action = (request.form.get("action") or "").strip().lower()
@@ -85,7 +136,9 @@ def accounting_manage(client_slug, business_slug):
                     actor=actor,
                     source="inventory_ui",
                 )
-                flash("Cuenta adoptada correctamente", "success")
+                inline_message = "Cuenta adoptada correctamente"
+                inline_message_type = "success"
+                flash(inline_message, "success")
             elif action == "unadopt":
                 inventory_service.unadopt_account_by_code(
                     business_id=business.id,
@@ -93,19 +146,26 @@ def accounting_manage(client_slug, business_slug):
                     actor=actor,
                     source="inventory_ui",
                 )
-                flash("Cuenta desadoptada correctamente", "success")
+                inline_message = "Cuenta desadoptada correctamente"
+                inline_message_type = "success"
+                flash(inline_message, "success")
             else:
+                inline_message = "Accion no valida"
+                inline_message_type = "error"
                 flash("Accion no valida", "warning")
         except ValueError as exc:
+            inline_message = str(exc)
+            inline_message_type = "error"
             flash(str(exc), "danger")
 
-        return redirect(
-            url_for(
-                "inventory.accounting_manage",
-                client_slug=business.client.slug,
-                business_slug=business.slug,
+        if not is_htmx_request:
+            return redirect(
+                url_for(
+                    "inventory.accounting_manage",
+                    client_slug=business.client.slug,
+                    business_slug=business.slug,
+                )
             )
-        )
 
     accounts = inventory_service.list_catalog_accounts()
     adoptions = inventory_service.list_account_adoptions(
@@ -121,13 +181,22 @@ def accounting_manage(client_slug, business_slug):
         :30
     ]
 
-    return render_template(
-        "inventory/accounting_manage.html",
-        business=business,
-        accounts=accounts,
-        adopted_by_code=adopted_by_code,
-        audits=audits,
-    )
+    template_context = {
+        "business": business,
+        "accounts": accounts,
+        "adopted_by_code": adopted_by_code,
+        "audits": audits,
+        "inline_message": inline_message,
+        "inline_message_type": inline_message_type,
+    }
+
+    if is_htmx_request:
+        return render_template(
+            "inventory/partials/_accounting_manage_content.html",
+            **template_context,
+        )
+
+    return render_template("inventory/accounting_manage.html", **template_context)
 
 
 @bp.route("/supply/list", methods=["GET"])
@@ -421,11 +490,24 @@ def movement_list(client_slug, business_slug):
                     "business_id": movement.business_id,
                     "inventory_item_id": movement.inventory_item_id,
                     "movement_type": movement.movement_type,
+                    "adjustment_kind": movement.adjustment_kind,
                     "destination": movement.destination,
                     "lot_code": movement.lot_code,
+                    "lot_date": (
+                        movement.lot_date.isoformat() if movement.lot_date else None
+                    ),
+                    "lot_unit": movement.lot_unit,
+                    "lot_conversion_factor": movement.lot_conversion_factor,
                     "quantity": movement.quantity,
                     "unit": movement.unit,
                     "account_code": movement.account_code,
+                    "supplier_name": movement.supplier_name,
+                    "waste_reason": movement.waste_reason,
+                    "waste_responsible": movement.waste_responsible,
+                    "waste_evidence": movement.waste_evidence,
+                    "waste_evidence_file_url": getattr(
+                        movement, "waste_evidence_file_url", None
+                    ),
                     "movement_date": (
                         movement.movement_date.isoformat()
                         if movement.movement_date
@@ -434,6 +516,226 @@ def movement_list(client_slug, business_slug):
                 }
                 for movement in movements
             ],
+        }
+    )
+
+
+@bp.route("/movement/waste-report", methods=["GET"])
+def movement_waste_report(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+
+    start_date = None
+    end_date = None
+    try:
+        if start_date_str:
+            start_date = datetime.fromisoformat(start_date_str)
+        if end_date_str:
+            end_date = datetime.fromisoformat(end_date_str)
+    except ValueError:
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "message": "Formato de fecha invalido. Use ISO 8601 (YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS)",
+                }
+            ),
+            400,
+        )
+
+    items = inventory_service.list_waste_report(
+        business_id=business.id,
+        start_date=start_date,
+        end_date=end_date,
+        inventory_item_id=request.args.get("inventory_item_id", type=int),
+        waste_reason=request.args.get("waste_reason"),
+    )
+
+    return jsonify(
+        {
+            "ok": True,
+            "items": [
+                {
+                    "inventory_item_id": row["inventory_item_id"],
+                    "inventory_item_name": row["inventory_item_name"],
+                    "waste_reason": row["waste_reason"],
+                    "events": row["events"],
+                    "total_quantity": row["total_quantity"],
+                    "total_amount": row["total_amount"],
+                    "last_movement_date": (
+                        row["last_movement_date"].isoformat()
+                        if row["last_movement_date"]
+                        else None
+                    ),
+                }
+                for row in items
+            ],
+        }
+    )
+
+
+@bp.route("/cycle-count/list", methods=["GET"])
+def cycle_count_list(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+    start_date = None
+    end_date = None
+    try:
+        if start_date_str:
+            start_date = datetime.fromisoformat(start_date_str)
+        if end_date_str:
+            end_date = datetime.fromisoformat(end_date_str)
+    except ValueError:
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "message": "Formato de fecha invalido. Use ISO 8601 (YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS)",
+                }
+            ),
+            400,
+        )
+
+    counts = inventory_service.list_cycle_counts(
+        business_id=business.id,
+        location=request.args.get("location"),
+        status=request.args.get("status"),
+        inventory_item_id=request.args.get("inventory_item_id", type=int),
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    return jsonify(
+        {
+            "ok": True,
+            "items": [
+                {
+                    "id": row.id,
+                    "business_id": row.business_id,
+                    "inventory_item_id": row.inventory_item_id,
+                    "inventory_item_name": (
+                        row.inventory_item.name if row.inventory_item else None
+                    ),
+                    "location": row.location,
+                    "theoretical_quantity": row.theoretical_quantity,
+                    "counted_quantity": row.counted_quantity,
+                    "difference_quantity": row.difference_quantity,
+                    "proposed_adjustment_kind": row.proposed_adjustment_kind,
+                    "status": row.status,
+                    "actor": row.actor,
+                    "counted_at": (
+                        row.counted_at.isoformat() if row.counted_at else None
+                    ),
+                    "observation": row.observation,
+                    "applied_movement_id": row.applied_movement_id,
+                }
+                for row in counts
+            ],
+        }
+    )
+
+
+@bp.route("/cycle-count/create", methods=["POST"])
+def cycle_count_create(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    payload = request.get_json(silent=True) or request.form
+    counted_at_raw = payload.get("counted_at")
+    counted_at = None
+    if counted_at_raw not in (None, ""):
+        try:
+            counted_at = datetime.fromisoformat(str(counted_at_raw))
+        except ValueError:
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "message": "counted_at invalida. Use ISO 8601 (YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS)",
+                    }
+                ),
+                400,
+            )
+
+    try:
+        row = inventory_service.create_cycle_count(
+            business_id=business.id,
+            inventory_item_id=int(payload.get("inventory_item_id")),
+            location=str(payload.get("location", "warehouse")),
+            counted_quantity=float(payload.get("counted_quantity", 0)),
+            actor=str(payload.get("actor", "")),
+            counted_at=counted_at,
+            observation=payload.get("observation"),
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return (
+        jsonify(
+            {
+                "ok": True,
+                "item": {
+                    "id": row.id,
+                    "inventory_item_id": row.inventory_item_id,
+                    "location": row.location,
+                    "theoretical_quantity": row.theoretical_quantity,
+                    "counted_quantity": row.counted_quantity,
+                    "difference_quantity": row.difference_quantity,
+                    "proposed_adjustment_kind": row.proposed_adjustment_kind,
+                    "status": row.status,
+                    "actor": row.actor,
+                    "counted_at": (
+                        row.counted_at.isoformat() if row.counted_at else None
+                    ),
+                    "observation": row.observation,
+                },
+            }
+        ),
+        201,
+    )
+
+
+@bp.route("/cycle-count/<int:cycle_count_id>/reconcile", methods=["POST"])
+def cycle_count_reconcile(client_slug, business_slug, cycle_count_id):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    payload = request.get_json(silent=True) or request.form
+    try:
+        row = inventory_service.reconcile_cycle_count(
+            business_id=business.id,
+            cycle_count_id=cycle_count_id,
+            account_code=str(payload.get("account_code", "")),
+            actor=str(payload.get("actor", "")),
+            notes=payload.get("notes"),
+        )
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return jsonify(
+        {
+            "ok": True,
+            "item": {
+                "id": row.id,
+                "status": row.status,
+                "applied_movement_id": row.applied_movement_id,
+                "difference_quantity": row.difference_quantity,
+                "proposed_adjustment_kind": row.proposed_adjustment_kind,
+            },
         }
     )
 
@@ -464,12 +766,19 @@ def movement_create(client_slug, business_slug):
             return None
         return float(value)
 
+    def _to_date(name):
+        value = _raw(name)
+        if value in (None, ""):
+            return None
+        return datetime.fromisoformat(str(value)).date()
+
     try:
         movement = inventory_service.create_movement(
             business_id=business.id,
             inventory_item_id=int(_raw("inventory_item_id")),
             movement_type=str(_raw("movement_type", "")),
             destination=_raw("destination"),
+            adjustment_kind=_raw("adjustment_kind"),
             quantity=float(_raw("quantity", 0)),
             unit=str(_raw("unit", "")),
             inventory_id=_to_int("inventory_id"),
@@ -479,7 +788,15 @@ def movement_create(client_slug, business_slug):
             idempotency_key=_raw("idempotency_key"),
             reference_type=_raw("reference_type"),
             reference_id=_to_int("reference_id"),
+            supplier_name=_raw("supplier_name"),
+            waste_reason=_raw("waste_reason"),
+            waste_responsible=_raw("waste_responsible"),
+            waste_evidence=_raw("waste_evidence"),
+            waste_evidence_file_url=_raw("waste_evidence_file_url"),
             lot_code=_raw("lot_code"),
+            lot_date=_to_date("lot_date"),
+            lot_unit=_raw("lot_unit"),
+            lot_conversion_factor=_to_float("lot_conversion_factor"),
             document=_raw("document"),
             notes=_raw("notes"),
         )
@@ -493,11 +810,125 @@ def movement_create(client_slug, business_slug):
                 "item": {
                     "id": movement.id,
                     "movement_type": movement.movement_type,
+                    "adjustment_kind": movement.adjustment_kind,
                     "destination": movement.destination,
                     "lot_code": movement.lot_code,
                     "quantity": movement.quantity,
                     "unit": movement.unit,
                     "account_code": movement.account_code,
+                    "supplier_name": movement.supplier_name,
+                    "waste_reason": movement.waste_reason,
+                    "waste_responsible": movement.waste_responsible,
+                    "waste_evidence": movement.waste_evidence,
+                    "waste_evidence_file_url": getattr(
+                        movement, "waste_evidence_file_url", None
+                    ),
+                    "lot_date": (
+                        movement.lot_date.isoformat() if movement.lot_date else None
+                    ),
+                    "lot_unit": movement.lot_unit,
+                    "lot_conversion_factor": movement.lot_conversion_factor,
+                    "min_stock_alert": bool(
+                        getattr(movement, "min_stock_alert", False)
+                    ),
+                    "min_stock_policy": getattr(movement, "min_stock_policy", "alert"),
+                    "projected_stock": getattr(movement, "projected_stock", None),
+                    "min_stock_threshold": getattr(
+                        movement, "min_stock_threshold", None
+                    ),
+                },
+            }
+        ),
+        201,
+    )
+
+
+@bp.route("/purchase-receipt/create", methods=["POST"])
+def purchase_receipt_create(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    payload = request.get_json(silent=True) or request.form
+
+    receipt_date_raw = payload.get("receipt_date")
+    try:
+        receipt_date = datetime.fromisoformat(str(receipt_date_raw))
+    except (TypeError, ValueError):
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "message": "receipt_date invalida. Use ISO 8601 (YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS)",
+                }
+            ),
+            400,
+        )
+
+    try:
+        movement = inventory_service.create_purchase_receipt(
+            business_id=business.id,
+            inventory_item_id=int(payload.get("inventory_item_id")),
+            quantity=float(payload.get("quantity", 0)),
+            unit=str(payload.get("unit", "")),
+            account_code=str(payload.get("account_code", "")),
+            supplier_name=str(payload.get("supplier_name", "")),
+            document=str(payload.get("document", "")),
+            receipt_date=receipt_date,
+            unit_cost=float(payload.get("unit_cost", 0)),
+            total_cost=(
+                float(payload.get("total_cost"))
+                if payload.get("total_cost") not in (None, "")
+                else None
+            ),
+            lot_code=payload.get("lot_code"),
+            lot_date=(
+                datetime.fromisoformat(str(payload.get("lot_date"))).date()
+                if payload.get("lot_date") not in (None, "")
+                else None
+            ),
+            lot_unit=(
+                str(payload.get("lot_unit", ""))
+                if payload.get("lot_unit") not in (None, "")
+                else None
+            ),
+            lot_conversion_factor=(
+                float(payload.get("lot_conversion_factor"))
+                if payload.get("lot_conversion_factor") not in (None, "")
+                else None
+            ),
+            notes=payload.get("notes"),
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return (
+        jsonify(
+            {
+                "ok": True,
+                "item": {
+                    "id": movement.id,
+                    "movement_type": movement.movement_type,
+                    "inventory_item_id": movement.inventory_item_id,
+                    "quantity": movement.quantity,
+                    "unit": movement.unit,
+                    "unit_cost": movement.unit_cost,
+                    "total_cost": movement.total_cost,
+                    "account_code": movement.account_code,
+                    "supplier_name": movement.supplier_name,
+                    "document": movement.document,
+                    "lot_code": movement.lot_code,
+                    "lot_date": (
+                        movement.lot_date.isoformat() if movement.lot_date else None
+                    ),
+                    "lot_unit": movement.lot_unit,
+                    "lot_conversion_factor": movement.lot_conversion_factor,
+                    "movement_date": (
+                        movement.movement_date.isoformat()
+                        if movement.movement_date
+                        else None
+                    ),
                 },
             }
         ),
@@ -514,6 +945,7 @@ def movement_stowage_card(client_slug, business_slug):
 
     inventory_item_id = request.args.get("inventory_item_id", type=int)
     lot_code = request.args.get("lot_code")
+    location = request.args.get("location")
 
     if inventory_item_id is None:
         return (
@@ -526,6 +958,7 @@ def movement_stowage_card(client_slug, business_slug):
             business_id=business.id,
             inventory_item_id=inventory_item_id,
             lot_code=lot_code or "",
+            location=location,
         )
     except ValueError as exc:
         return jsonify({"ok": False, "message": str(exc)}), 400
@@ -536,11 +969,14 @@ def movement_stowage_card(client_slug, business_slug):
             "item": {
                 "inventory_item_id": inventory_item_id,
                 "lot_code": (lot_code or "").strip(),
+                "location": (location or "").strip().lower() or None,
                 "entries": [
                     {
                         "id": row["id"],
                         "movement_type": row["movement_type"],
+                        "adjustment_kind": row.get("adjustment_kind"),
                         "destination": row["destination"],
+                        "location": row.get("location"),
                         "lot_code": row["lot_code"],
                         "quantity": row["quantity"],
                         "delta": row["delta"],
@@ -552,6 +988,16 @@ def movement_stowage_card(client_slug, business_slug):
                             else None
                         ),
                         "account_code": row["account_code"],
+                        "supplier_name": row["supplier_name"],
+                        "waste_reason": row["waste_reason"],
+                        "waste_responsible": row["waste_responsible"],
+                        "waste_evidence": row["waste_evidence"],
+                        "waste_evidence_file_url": row.get("waste_evidence_file_url"),
+                        "lot_date": (
+                            row["lot_date"].isoformat() if row["lot_date"] else None
+                        ),
+                        "lot_unit": row["lot_unit"],
+                        "lot_conversion_factor": row["lot_conversion_factor"],
                         "reference_type": row["reference_type"],
                         "reference_id": row["reference_id"],
                         "document": row["document"],
@@ -586,6 +1032,143 @@ def sales_floor_list(client_slug, business_slug):
                     "current_quantity": item.current_quantity,
                     "min_quantity": item.min_quantity,
                     "max_quantity": item.max_quantity,
+                }
+                for item in items
+            ],
+        }
+    )
+
+
+@bp.route("/accounting/turnover-coverage", methods=["GET"])
+def accounting_turnover_coverage(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+    inventory_item_id = request.args.get("inventory_item_id", type=int)
+
+    start_date = None
+    end_date = None
+    try:
+        if start_date_str:
+            start_date = datetime.fromisoformat(start_date_str)
+        if end_date_str:
+            end_date = datetime.fromisoformat(end_date_str)
+    except ValueError:
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "message": "Formato de fecha invalido. Use ISO 8601 (YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS)",
+                }
+            ),
+            400,
+        )
+
+    try:
+        items = inventory_service.list_inventory_turnover_coverage(
+            business_id=business.id,
+            inventory_item_id=inventory_item_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return jsonify(
+        {
+            "ok": True,
+            "items": [
+                {
+                    "inventory_item_id": item["inventory_item_id"],
+                    "inventory_item_name": item["inventory_item_name"],
+                    "unit": item["unit"],
+                    "period_start": (
+                        item["period_start"].isoformat()
+                        if item.get("period_start")
+                        else None
+                    ),
+                    "period_end": (
+                        item["period_end"].isoformat()
+                        if item.get("period_end")
+                        else None
+                    ),
+                    "period_days": item["period_days"],
+                    "movement_count": item["movement_count"],
+                    "opening_stock": item["opening_stock"],
+                    "closing_stock": item["closing_stock"],
+                    "inbound_quantity": item["inbound_quantity"],
+                    "outbound_quantity": item["outbound_quantity"],
+                    "average_stock": item["average_stock"],
+                    "avg_daily_outbound": item["avg_daily_outbound"],
+                    "turnover_ratio": item["turnover_ratio"],
+                    "days_of_coverage": item["days_of_coverage"],
+                    "min_stock": item["min_stock"],
+                }
+                for item in items
+            ],
+        }
+    )
+
+
+@bp.route("/accounting/stockout-risk", methods=["GET"])
+def accounting_stockout_risk(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+    inventory_item_id = request.args.get("inventory_item_id", type=int)
+
+    start_date = None
+    end_date = None
+    try:
+        if start_date_str:
+            start_date = datetime.fromisoformat(start_date_str)
+        if end_date_str:
+            end_date = datetime.fromisoformat(end_date_str)
+    except ValueError:
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "message": "Formato de fecha invalido. Use ISO 8601 (YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS)",
+                }
+            ),
+            400,
+        )
+
+    try:
+        items = inventory_service.list_stockout_risk_report(
+            business_id=business.id,
+            inventory_item_id=inventory_item_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return jsonify(
+        {
+            "ok": True,
+            "items": [
+                {
+                    "inventory_item_id": item["inventory_item_id"],
+                    "inventory_item_name": item["inventory_item_name"],
+                    "unit": item["unit"],
+                    "closing_stock": item["closing_stock"],
+                    "avg_daily_outbound": item["avg_daily_outbound"],
+                    "days_of_coverage": item["days_of_coverage"],
+                    "min_stock": item["min_stock"],
+                    "stockout": item["stockout"],
+                    "risk_of_stockout": item["risk_of_stockout"],
+                    "min_stock_breach": item["min_stock_breach"],
+                    "risk_level": item["risk_level"],
                 }
                 for item in items
             ],
@@ -678,6 +1261,97 @@ def sales_floor_alerts(client_slug, business_slug):
     return jsonify({"ok": True, "items": items})
 
 
+@bp.route("/alerts/preventive", methods=["GET"])
+def preventive_alerts(client_slug, business_slug):
+    try:
+        inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    usage_type = request.args.get("usage_type")
+    try:
+        days_to_expiration = int(request.args.get("days_to_expiration", 7))
+    except (TypeError, ValueError):
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "message": "days_to_expiration debe ser un numero entero",
+                }
+            ),
+            400,
+        )
+
+    try:
+        alerts = inventory_service.list_inventory_preventive_alerts(
+            days_to_expiration=days_to_expiration,
+            usage_type=usage_type,
+        )
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return jsonify(
+        {
+            "ok": True,
+            "items": [
+                {
+                    "inventory_item_id": item["inventory_item_id"],
+                    "inventory_item_name": item["inventory_item_name"],
+                    "usage_type": item["usage_type"],
+                    "stock": item["stock"],
+                    "min_stock": item["min_stock"],
+                    "low_stock": item["low_stock"],
+                    "expiration_date": (
+                        item["expiration_date"].isoformat()
+                        if item["expiration_date"]
+                        else None
+                    ),
+                    "expired": item["expired"],
+                    "expiring_soon": item["expiring_soon"],
+                    "days_until_expiration": item["days_until_expiration"],
+                }
+                for item in alerts
+            ],
+        }
+    )
+
+
+@bp.route("/stock/position", methods=["GET"])
+def stock_position(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    inventory_item_id = request.args.get("inventory_item_id", type=int)
+    try:
+        items = inventory_service.list_stock_position(
+            business_id=business.id,
+            inventory_item_id=inventory_item_id,
+        )
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return jsonify(
+        {
+            "ok": True,
+            "items": [
+                {
+                    "inventory_item_id": item["inventory_item_id"],
+                    "inventory_item_name": item["inventory_item_name"],
+                    "unit": item["unit"],
+                    "stock_available": item["stock_available"],
+                    "stock_committed": item["stock_committed"],
+                    "stock_virtual": item["stock_virtual"],
+                    "stock_committed_sales_floor": item["stock_committed_sales_floor"],
+                    "stock_committed_wip": item["stock_committed_wip"],
+                }
+                for item in items
+            ],
+        }
+    )
+
+
 @bp.route("/wip/list", methods=["GET"])
 def wip_list(client_slug, business_slug):
     try:
@@ -712,6 +1386,12 @@ def wip_list(client_slug, business_slug):
                     "status": balance.status,
                     "can_be_subproduct": balance.can_be_subproduct,
                     "finished_location": balance.finished_location,
+                    "expiration_date": (
+                        balance.expiration_date.isoformat()
+                        if balance.expiration_date
+                        else None
+                    ),
+                    "expiration_source": balance.expiration_source,
                     "notes": balance.notes,
                 }
                 for balance in balances
@@ -730,6 +1410,24 @@ def wip_create(client_slug, business_slug):
     payload = request.get_json(silent=True) or request.form
 
     source_inventory_id = payload.get("source_inventory_id")
+    expiration_date_raw = payload.get("expiration_date")
+    expiration_date = None
+    if expiration_date_raw not in (None, ""):
+        try:
+            expiration_date = datetime.strptime(
+                str(expiration_date_raw), "%Y-%m-%d"
+            ).date()
+        except ValueError:
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "message": "expiration_date debe estar en formato YYYY-MM-DD",
+                    }
+                ),
+                400,
+            )
+
     try:
         balance = inventory_service.create_wip_balance(
             business_id=business.id,
@@ -742,6 +1440,7 @@ def wip_create(client_slug, business_slug):
                 if source_inventory_id not in (None, "")
                 else None
             ),
+            expiration_date=expiration_date,
             can_be_subproduct=str(payload.get("can_be_subproduct", "false")).lower()
             == "true",
             notes=payload.get("notes"),
@@ -762,6 +1461,12 @@ def wip_create(client_slug, business_slug):
                     "status": balance.status,
                     "can_be_subproduct": balance.can_be_subproduct,
                     "finished_location": balance.finished_location,
+                    "expiration_date": (
+                        balance.expiration_date.isoformat()
+                        if balance.expiration_date
+                        else None
+                    ),
+                    "expiration_source": balance.expiration_source,
                 },
             }
         ),
@@ -1363,6 +2068,141 @@ def accounting_mixed_sale_list(client_slug, business_slug):
                     "production_cost": item.production_cost,
                     "merchandise_cost": item.merchandise_cost,
                     "notes": item.notes,
+                }
+                for item in items
+            ],
+        }
+    )
+
+
+@bp.route("/accounting/kardex-valued", methods=["GET"])
+def accounting_kardex_valued(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+    inventory_item_id = request.args.get("inventory_item_id", type=int)
+
+    start_date = None
+    end_date = None
+    try:
+        if start_date_str:
+            start_date = datetime.fromisoformat(start_date_str)
+        if end_date_str:
+            end_date = datetime.fromisoformat(end_date_str)
+    except ValueError:
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "message": "Formato de fecha invalido. Use ISO 8601 (YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS)",
+                }
+            ),
+            400,
+        )
+
+    try:
+        items = inventory_service.list_valued_kardex(
+            business_id=business.id,
+            inventory_item_id=inventory_item_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return jsonify(
+        {
+            "ok": True,
+            "items": [
+                {
+                    "movement_id": item["movement_id"],
+                    "movement_date": (
+                        item["movement_date"].isoformat()
+                        if item.get("movement_date")
+                        else None
+                    ),
+                    "inventory_item_id": item["inventory_item_id"],
+                    "inventory_item_name": item["inventory_item_name"],
+                    "movement_type": item["movement_type"],
+                    "adjustment_kind": item["adjustment_kind"],
+                    "quantity": item["quantity"],
+                    "delta_quantity": item["delta_quantity"],
+                    "unit": item["unit"],
+                    "unit_cost": item["unit_cost"],
+                    "total_cost": item["total_cost"],
+                    "amount": item["amount"],
+                    "delta_value": item["delta_value"],
+                    "running_stock": item["running_stock"],
+                    "running_value": item["running_value"],
+                    "account_code": item["account_code"],
+                    "reference_type": item["reference_type"],
+                    "reference_id": item["reference_id"],
+                    "document": item["document"],
+                }
+                for item in items
+            ],
+        }
+    )
+
+
+@bp.route("/accounting/sale-consumption-cost", methods=["GET"])
+def accounting_sale_consumption_cost(client_slug, business_slug):
+    try:
+        business = inventory_service.resolve_business(client_slug, business_slug)
+    except ValueError:
+        return jsonify({"ok": False, "message": "Negocio no encontrado"}), 404
+
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+    sale_id = request.args.get("sale_id", type=int)
+
+    start_date = None
+    end_date = None
+    try:
+        if start_date_str:
+            start_date = datetime.fromisoformat(start_date_str)
+        if end_date_str:
+            end_date = datetime.fromisoformat(end_date_str)
+    except ValueError:
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "message": "Formato de fecha invalido. Use ISO 8601 (YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS)",
+                }
+            ),
+            400,
+        )
+
+    try:
+        items = inventory_service.summarize_sale_consumption_cost_report(
+            business_id=business.id,
+            sale_id=sale_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+
+    return jsonify(
+        {
+            "ok": True,
+            "items": [
+                {
+                    "sale_id": item["sale_id"],
+                    "sale_number": item["sale_number"],
+                    "sale_date": (
+                        item["sale_date"].isoformat() if item.get("sale_date") else None
+                    ),
+                    "movement_count": item["movement_count"],
+                    "consumption_quantity": item["consumption_quantity"],
+                    "consumption_cost": item["consumption_cost"],
+                    "reversal_cost": item["reversal_cost"],
+                    "net_consumption_cost": item["net_consumption_cost"],
                 }
                 for item in items
             ],

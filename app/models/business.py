@@ -65,6 +65,13 @@ class Business(db.Model):
         server_default=db.false(),
         comment="Habilita flujo de produccion en proceso (WIP)",
     )
+    inventory_min_stock_policy = db.Column(
+        db.String(20),
+        nullable=False,
+        default="alert",
+        server_default="alert",
+        comment="Politica al romper stock minimo: alert o block",
+    )
     income_entry_mode = db.Column(
         db.String(30),
         nullable=False,
@@ -177,6 +184,10 @@ class Business(db.Model):
         db.CheckConstraint(
             "default_income_activity IN ('sale', 'service')",
             name="business_default_income_activity_allowed_values",
+        ),
+        db.CheckConstraint(
+            "inventory_min_stock_policy IN ('alert', 'block')",
+            name="business_inventory_min_stock_policy_allowed_values",
         ),
     )
 

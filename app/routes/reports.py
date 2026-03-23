@@ -461,6 +461,7 @@ def inventory_consumption(client_slug, business_slug):
 @bp.route("/inventory-consumption/view", methods=["GET", "POST"])
 def inventory_consumption_view(client_slug, business_slug):
     """Renderiza una plantilla con el consumo de inventario para el mes seleccionado."""
+    is_htmx_request = request.headers.get("HX-Request") == "true"
     business, business_filters, redirect_response = _resolve_business_scope_or_redirect(
         client_slug,
         business_slug,
@@ -470,31 +471,41 @@ def inventory_consumption_view(client_slug, business_slug):
 
     selected_month = None
     consumption_by_day = []
+    inline_message = None
+    inline_message_type = None
 
     if request.method == "POST":
         selected_month = request.form.get("month")
         if not selected_month:
+            inline_message = "Por favor, selecciona un mes."
+            inline_message_type = "error"
             flash("Por favor, selecciona un mes.", "error")
-            # no hay consumo porque no se seleccionó mes
-            return render_template(
-                "report/inventory_consumption.html",
-                business=business,
-                consumption_by_day=[],
-                selected_month=selected_month,
-            )
+            consumption_by_day = []
 
-        try:
-            consumption_by_day = sales_service.get_inventory_consumption_by_day(
-                selected_month,
-                business_filters["business_id"],
-                business_filters.get("specific_business_id"),
-            )
-        except ValueError:
-            flash("Formato de mes inválido. Usa YYYY-MM.", "error")
+        if selected_month:
+            try:
+                consumption_by_day = sales_service.get_inventory_consumption_by_day(
+                    selected_month,
+                    business_filters["business_id"],
+                    business_filters.get("specific_business_id"),
+                )
+            except ValueError:
+                inline_message = "Formato de mes invalido. Usa YYYY-MM."
+                inline_message_type = "error"
+                flash("Formato de mes inválido. Usa YYYY-MM.", "error")
 
-    return render_template(
-        "report/inventory_consumption.html",
-        business=business,
-        consumption_by_day=consumption_by_day,
-        selected_month=selected_month,
-    )
+    template_context = {
+        "business": business,
+        "consumption_by_day": consumption_by_day,
+        "selected_month": selected_month,
+        "inline_message": inline_message,
+        "inline_message_type": inline_message_type,
+    }
+
+    if is_htmx_request:
+        return render_template(
+            "report/partials/_inventory_consumption_content.html",
+            **template_context,
+        )
+
+    return render_template("report/inventory_consumption.html", **template_context)

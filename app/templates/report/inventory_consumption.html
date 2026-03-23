@@ -2,19 +2,21 @@
 {% block vendor_javascript %}
   {% include 'components/simple_datatables_vendor_js.html' %}
   <script>
-    // Serializar la estructura consumption_by_day y ponerla en el campo oculto antes de enviar
-    document.addEventListener('DOMContentLoaded', function(){
-      const exportForm = document.getElementById('export-form');
-      if(!exportForm) return;
-      exportForm.addEventListener('submit', function(e){
+    // Maneja serializacion del export incluso despues de swaps HTMX.
+    document.addEventListener('submit', function(e){
+      const exportForm = e.target;
+      if(!exportForm || exportForm.id !== 'export-form') return;
+      try {
         const input = document.getElementById('consumption_export_input');
-        try{
+        if (input) {
           input.value = JSON.stringify({{ consumption_by_day|tojson }});
-        }catch(err){
-          console.error('No se pudo serializar consumption_by_day', err);
+        }
+      } catch(err) {
+        const input = document.getElementById('consumption_export_input');
+        if (input) {
           input.value = '[]';
         }
-      });
+      }
     });
   </script>
 {% endblock vendor_javascript %}
@@ -23,78 +25,7 @@
   {% set hero_subtitle = 'Muestra la cantidad de materias primas consumidas derivado de las ventas.' %}
   {% include 'components/page_hero.html' %}
 
-  <section class="bg-white py-12 dark:bg-gray-800">
-    <div class="container mx-auto px-4">
-      <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">
-        Seleccionar Mes
-      </h2>
-      <form
-        method="post"
-        class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md dark:bg-gray-700"
-      >
-        <div class="mb-4">
-          <label for="month" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Seleccionar Mes:</label>
-          <input type="month" id="month" name="month" value="{{ selected_month }}" required class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" />
-        </div>
-        <button type="submit" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Generar Reporte</button>
-      </form>
-    </div>
-  </section>
-
-  <section class="bg-gray-100 py-12 dark:bg-gray-800">
-    <div class="container mx-auto px-4">
-      {% if consumption_by_day and consumption_by_day|length > 0 %}
-        <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">Resultados para {{ selected_month }}</h3>
-
-        <div class="mb-6 flex justify-end">
-          <form id="export-form" action="{{ url_for('report.export_to_excel_inventory_consumption', client_slug=business.client.slug, business_slug=business.slug) }}" method="post">
-            <input type="hidden" name="consumption_export" id="consumption_export_input" />
-            <input type="hidden" name="selected_month" value="{{ selected_month }}" />
-            <button type="submit" id="export-button" class="text-white bg-green-500 hover:bg-green-600 font-medium rounded-lg text-sm px-5 py-2.5">Exportar a Excel</button>
-          </form>
-        </div>
-
-        {% for day in consumption_by_day %}
-          <div class="day-report mb-8">
-            <h4 class="text-xl font-bold text-gray-800 dark:text-white">{{ day.date }}</h4>
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                  <tr>
-                    <th class="py-3 px-6">Materia Prima</th>
-                    <th class="py-3 px-6">Unidad</th>
-                    <th class="py-3 px-6">Total Consumido</th>
-                    <th class="py-3 px-6">Usos por Producto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for item in day['items'] %}
-                    <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                      <td class="py-4 px-6">{{ item.name }}</td>
-                      <td class="py-4 px-6">{{ item.unit }}</td>
-                      <td class="py-4 px-6">{{ "%.4f"|format(item.total_consumed) }}</td>
-                      <td class="py-4 px-6">
-                        <ul class="list-disc list-inside">
-                          {% for prod, qty in item.product_usages.items() %}
-                            <li>{{ prod }}: {{ qty }}</li>
-                          {% endfor %}
-                        </ul>
-                      </td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        {% endfor %}
-
-      {% else %}
-        <div class="text-center text-gray-600 dark:text-gray-300">
-          <p>No hay datos de consumo disponibles para este mes.</p>
-        </div>
-      {% endif %}
-    </div>
-  </section>
+  {% include 'report/partials/_inventory_consumption_content.html' %}
 
 {% endblock content %}
 

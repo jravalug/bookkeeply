@@ -1,0 +1,83 @@
+<section class="bg-gray-100 py-12 dark:bg-gray-800">
+  <div class="container mx-auto px-4">
+    {% if consumption_by_day and consumption_by_day|length > 0 %}
+      <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">
+        Resultados para {{ selected_month }}
+      </h3>
+
+      <div class="mb-6 flex justify-end">
+        <form
+          id="export-form"
+          action="{{ url_for('report.export_to_excel_inventory_consumption', client_slug=business.client.slug, business_slug=business.slug) }}"
+          method="post"
+        >
+          <input
+            type="hidden"
+            name="consumption_export"
+            id="consumption_export_input"
+          />
+          <input
+            type="hidden"
+            name="selected_month"
+            value="{{ selected_month }}"
+          />
+          <button
+            type="submit"
+            id="export-button"
+            class="text-white bg-green-500 hover:bg-green-600 font-medium rounded-lg text-sm px-5 py-2.5"
+          >
+            Exportar a Excel
+          </button>
+        </form>
+      </div>
+
+      {% for day in consumption_by_day %}
+        <div class="day-report mb-8">
+          <h4 class="text-xl font-bold text-gray-800 dark:text-white">
+            {{ day.date }}
+          </h4>
+          <div class="overflow-x-auto">
+            <table
+              class="w-full text-sm text-left text-gray-500 dark:text-gray-400"
+            >
+              <thead
+                class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400"
+              >
+                <tr>
+                  <th class="py-3 px-6">Materia Prima</th>
+                  <th class="py-3 px-6">Unidad</th>
+                  <th class="py-3 px-6">Total Consumido</th>
+                  <th class="py-3 px-6">Usos por Producto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in day['items'] %}
+                  <tr
+                    class="bg-white border-b dark:bg-gray-800 dark:border-gray-700"
+                  >
+                    <td class="py-4 px-6">{{ item.name }}</td>
+                    <td class="py-4 px-6">{{ item.unit }}</td>
+                    <td class="py-4 px-6">
+                      {{ "%.4f"|format(item.total_consumed) }}
+                    </td>
+                    <td class="py-4 px-6">
+                      <ul class="list-disc list-inside">
+                        {% for prod, qty in item.product_usages.items() %}
+                          <li>{{ prod }}: {{ qty }}</li>
+                        {% endfor %}
+                      </ul>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="text-center text-gray-600 dark:text-gray-300">
+        <p>No hay datos de consumo disponibles para este mes.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>

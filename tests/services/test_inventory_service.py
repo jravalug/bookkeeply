@@ -97,6 +97,82 @@ class FakeInventoryMovementModelForCard:
 
 
 class TestInventoryService(unittest.TestCase):
+    def test_create_wip_balance_inherits_expiration_from_inventory_lot(self):
+        expected_expiration = datetime(2026, 4, 10).date()
+        fake_movement = SimpleNamespace(unit="kg")
+        fake_lot_movement = SimpleNamespace(lot_date=expected_expiration)
+
+        with patch(
+            "app.services.inventory_service.InventoryService._resolve_business_inventory_flows",
+            return_value=(True, True),
+        ), patch(
+            "app.services.inventory_service.InventoryService._get_item_or_404",
+            return_value=SimpleNamespace(usage_type="production_input"),
+        ), patch(
+            "app.services.inventory_service.InventoryService.create_movement",
+            return_value=fake_movement,
+        ), patch(
+            "app.services.inventory_service.InventoryMovement"
+        ) as movement_model, patch(
+            "app.services.inventory_service.InventoryWipBalance"
+        ) as wip_model, patch(
+            "app.services.inventory_service.db.session.add"
+        ) as add_mock, patch(
+            "app.services.inventory_service.db.session.commit"
+        ) as commit_mock:
+            movement_model.query.filter.return_value.order_by.return_value.first.return_value = (
+                fake_lot_movement
+            )
+            wip_model.side_effect = lambda **kwargs: SimpleNamespace(**kwargs)
+
+            result = InventoryService.create_wip_balance(
+                business_id=1,
+                inventory_item_id=9,
+                quantity=2,
+                unit="kg",
+                account_code="7101",
+                source_inventory_id=77,
+            )
+
+        self.assertEqual(result.expiration_date, expected_expiration)
+        self.assertEqual(result.expiration_source, "inventory_lot")
+        add_mock.assert_called_once_with(result)
+        commit_mock.assert_called_once()
+
+    def test_create_wip_balance_manual_expiration_overrides_inventory_reference(self):
+        manual_expiration = datetime(2026, 5, 1).date()
+        fake_movement = SimpleNamespace(unit="kg")
+
+        with patch(
+            "app.services.inventory_service.InventoryService._resolve_business_inventory_flows",
+            return_value=(True, True),
+        ), patch(
+            "app.services.inventory_service.InventoryService._get_item_or_404",
+            return_value=SimpleNamespace(usage_type="production_input"),
+        ), patch(
+            "app.services.inventory_service.InventoryService.create_movement",
+            return_value=fake_movement,
+        ), patch(
+            "app.services.inventory_service.InventoryWipBalance"
+        ) as wip_model, patch(
+            "app.services.inventory_service.db.session.add"
+        ), patch(
+            "app.services.inventory_service.db.session.commit"
+        ):
+            wip_model.side_effect = lambda **kwargs: SimpleNamespace(**kwargs)
+            result = InventoryService.create_wip_balance(
+                business_id=2,
+                inventory_item_id=10,
+                quantity=1,
+                unit="kg",
+                account_code="7101",
+                source_inventory_id=55,
+                expiration_date=manual_expiration,
+            )
+
+        self.assertEqual(result.expiration_date, manual_expiration)
+        self.assertEqual(result.expiration_source, "manual")
+
     def test_consume_wip_balance_partial_keeps_open_status(self):
         wip_balance = SimpleNamespace(
             id=10,
@@ -301,6 +377,10 @@ class TestInventoryService(unittest.TestCase):
                 unit="kg",
                 movement_date=datetime(2026, 3, 9, 10, 0, 0),
                 account_code="7101",
+                supplier_name="Proveedor Demo",
+                lot_date=datetime(2026, 3, 20).date(),
+                lot_unit="box",
+                lot_conversion_factor=24.0,
                 reference_type=None,
                 reference_id=None,
                 document="FAC-1",
@@ -315,6 +395,10 @@ class TestInventoryService(unittest.TestCase):
                 unit="kg",
                 movement_date=datetime(2026, 3, 9, 11, 0, 0),
                 account_code="7101",
+                supplier_name=None,
+                lot_date=None,
+                lot_unit=None,
+                lot_conversion_factor=None,
                 reference_type="wip_balance",
                 reference_id=12,
                 document=None,

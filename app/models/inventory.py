@@ -78,6 +78,12 @@ class InventoryItem(db.Model):
         db.Boolean, nullable=False, default=True, server_default=db.true()
     )
     stock = db.Column(db.Float, default=0.0)  # Cantidad disponible en inventario
+    average_unit_cost = db.Column(
+        db.Float,
+        nullable=False,
+        default=0.0,
+        server_default="0",
+    )
     min_stock = db.Column(db.Float, nullable=True)
     expiration_date = db.Column(db.Date, nullable=True)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
@@ -91,6 +97,61 @@ class InventoryItem(db.Model):
             "usage_type IN ('sale_direct', 'production_input', 'mixed')",
             name="ck_inventory_item_usage_type",
         ),
+    )
+
+
+class InventoryUnitConversion(db.Model):
+    __tablename__ = "inventory_unit_conversion"
+
+    id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("business.id"),
+        nullable=False,
+        index=True,
+    )
+    inventory_item_id = db.Column(
+        db.Integer,
+        db.ForeignKey("inventory_item.id"),
+        nullable=False,
+        index=True,
+    )
+    from_unit = db.Column(db.String(20), nullable=False)
+    to_unit = db.Column(db.String(20), nullable=False)
+    factor = db.Column(db.Float, nullable=False)
+    is_active = db.Column(
+        db.Boolean, nullable=False, default=True, server_default=db.true()
+    )
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp(),
+    )
+
+    business = db.relationship(
+        "Business", foreign_keys=[business_id], backref="inventory_unit_conversions"
+    )
+    inventory_item = db.relationship(
+        "InventoryItem",
+        foreign_keys=[inventory_item_id],
+        backref="unit_conversions",
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "business_id",
+            "inventory_item_id",
+            "from_unit",
+            "to_unit",
+            name="uq_inventory_unit_conversion_business_item_units",
+        ),
+        db.CheckConstraint("factor > 0", name="ck_inventory_unit_conversion_factor"),
     )
 
 
@@ -236,8 +297,12 @@ class InventoryMovement(db.Model):
         index=True,
     )
     movement_type = db.Column(db.String(30), nullable=False, index=True)
+    adjustment_kind = db.Column(db.String(20), nullable=True, index=True)
     destination = db.Column(db.String(30), nullable=True, index=True)
     lot_code = db.Column(db.String(80), nullable=True, index=True)
+    lot_date = db.Column(db.Date, nullable=True)
+    lot_unit = db.Column(db.String(20), nullable=True)
+    lot_conversion_factor = db.Column(db.Float, nullable=True)
     quantity = db.Column(db.Float, nullable=False)
     unit = db.Column(db.String(20), nullable=False)
     unit_cost = db.Column(db.Float, nullable=True)
@@ -246,6 +311,11 @@ class InventoryMovement(db.Model):
     idempotency_key = db.Column(db.String(120), nullable=True, unique=True)
     reference_type = db.Column(db.String(40), nullable=True)
     reference_id = db.Column(db.Integer, nullable=True)
+    supplier_name = db.Column(db.String(160), nullable=True)
+    waste_reason = db.Column(db.String(40), nullable=True)
+    waste_responsible = db.Column(db.String(120), nullable=True)
+    waste_evidence = db.Column(db.Text, nullable=True)
+    waste_evidence_file_url = db.Column(db.String(255), nullable=True)
     document = db.Column(db.String(80), nullable=True)
     notes = db.Column(db.Text, nullable=True)
     movement_date = db.Column(
@@ -324,6 +394,8 @@ class InventoryWipBalance(db.Model):
         default="finished_goods",
         server_default="finished_goods",
     )
+    expiration_date = db.Column(db.Date, nullable=True)
+    expiration_source = db.Column(db.String(30), nullable=True)
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(
         db.DateTime,
@@ -542,5 +614,87 @@ class InventorySaleCostBreakdown(db.Model):
         db.CheckConstraint(
             "merchandise_cost >= 0",
             name="ck_inventory_sale_cost_breakdown_merchandise_cost",
+        ),
+    )
+
+
+class InventoryCycleCount(db.Model):
+    __tablename__ = "inventory_cycle_count"
+
+    STATUS_PENDING = "pending"
+    STATUS_APPLIED = "applied"
+
+    id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("business.id"),
+        nullable=False,
+        index=True,
+    )
+    inventory_item_id = db.Column(
+        db.Integer,
+        db.ForeignKey("inventory_item.id"),
+        nullable=False,
+        index=True,
+    )
+    location = db.Column(db.String(30), nullable=False, default="warehouse")
+    theoretical_quantity = db.Column(db.Float, nullable=False, default=0.0)
+    counted_quantity = db.Column(db.Float, nullable=False, default=0.0)
+    difference_quantity = db.Column(db.Float, nullable=False, default=0.0)
+    proposed_adjustment_kind = db.Column(db.String(20), nullable=True)
+    status = db.Column(db.String(20), nullable=False, default=STATUS_PENDING)
+    actor = db.Column(db.String(120), nullable=False)
+    counted_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+    observation = db.Column(db.Text, nullable=True)
+    applied_movement_id = db.Column(
+        db.Integer,
+        db.ForeignKey("inventory_movement.id"),
+        nullable=True,
+        index=True,
+    )
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp(),
+    )
+
+    business = db.relationship(
+        "Business",
+        foreign_keys=[business_id],
+        backref="inventory_cycle_counts",
+    )
+    inventory_item = db.relationship(
+        "InventoryItem",
+        foreign_keys=[inventory_item_id],
+        backref="cycle_counts",
+    )
+    applied_movement = db.relationship(
+        "InventoryMovement",
+        foreign_keys=[applied_movement_id],
+        backref="cycle_count_reconciliation",
+    )
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "location IN ('warehouse')",
+            name="ck_inventory_cycle_count_location",
+        ),
+        db.CheckConstraint(
+            "status IN ('pending', 'applied')",
+            name="ck_inventory_cycle_count_status",
+        ),
+        db.CheckConstraint(
+            "proposed_adjustment_kind IS NULL OR proposed_adjustment_kind IN ('positive', 'negative')",
+            name="ck_inventory_cycle_count_proposed_adjustment_kind",
         ),
     )

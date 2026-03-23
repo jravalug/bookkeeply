@@ -1,6 +1,6 @@
 # Plan maestro de implementacion por fases (Inventory)
 
-Fecha de actualizacion: 2026-03-09
+Fecha de actualizacion: 2026-03-10
 Estado: propuesta contextualizada (ajustada con decisiones funcionales)
 
 ## 1) Proposito
@@ -176,7 +176,7 @@ Pendiente para validacion funcional en la siguiente iteracion:
 
 - [x] Definir politica de valorizacion de salida: FEFO y FIFO como desempate.
 - [x] Definir politica operativa de mermas base y extensibilidad de causas.
-- [ ] Definir estandar de conteo ciclico y frecuencia minima por tipo de insumo.
+- [x] Definir estandar de conteo ciclico y frecuencia minima por tipo de insumo.
 - [x] Definir que la activacion de flujos (`exposicion`, `WIP`) sea configurable al crear negocio.
 - [x] Definir que los umbrales min/max se gestionan por `item-ubicacion`.
 - [x] Definir que tarjeta de estiba se controla por `item+lote`.
@@ -193,6 +193,22 @@ Pendiente para validacion funcional en la siguiente iteracion:
 - [x] Definir que las operaciones y asociaciones contables ocurren sobre cuentas adoptadas por negocio.
 
 ## 5) Estado por fase y objetivos concisos
+
+### Estado auditado de cumplimiento (2026-03-10)
+
+- [x] Fase 1 completada.
+- [x] Fase 2 completada.
+- [x] Fase 3 completada.
+- [x] Fase 4 completada.
+- [x] Fase 5 completada.
+- [x] Fase 6 completada.
+- [x] Fase 7 completada.
+- [x] Fase 8 completada.
+- [x] Fase 9 completada.
+- [x] Fase 10 completada.
+- [x] Fase 11 completada.
+- [x] Fase 12 completada.
+- [x] Fase 13 completada.
 
 ## Fase 1 - Saneamiento del catalogo maestro
 
@@ -217,12 +233,12 @@ Objetivo: registrar entradas y salidas de inventario con tipologia operacional t
 
 ### Entregables 2
 
-- [ ] Definir tipos de movimiento: `purchase`, `consumption`, `transfer`, `adjustment`, `waste`.
-- [ ] Definir destino de salida: `sales_floor` (exposicion) y `wip` (produccion_en_proceso).
-- [ ] Persistir movimiento con referencia de origen (factura, venta, ajuste manual).
-- [ ] Persistir movimientos con asiento contable asociado en valor monetario por transicion.
-- [ ] Garantizar idempotencia en movimientos generados desde ventas.
-- [ ] Exponer consulta de movimientos por item, negocio y rango de fechas.
+- [x] Definir tipos de movimiento: `purchase`, `consumption`, `transfer`, `adjustment`, `waste`.
+- [x] Definir destino de salida: `sales_floor` (exposicion) y `wip` (produccion_en_proceso).
+- [x] Persistir movimiento con referencia de origen (factura, venta, ajuste manual).
+- [x] Persistir movimientos con asiento contable asociado en valor monetario por transicion.
+- [x] Garantizar idempotencia en movimientos generados desde ventas.
+- [x] Exponer consulta de movimientos por item, negocio y rango de fechas.
 - [x] Subfase 2.1: generar tarjeta de estiba por `item+lote` con saldo acumulado.
 - [x] Subfase 2.2: generar lote automatico cuando aplique y no exista lote manual.
 
@@ -232,19 +248,14 @@ Objetivo: controlar mercancia colocada para venta directa y automatizar reposici
 
 ### Entregables 3
 
-- [ ] Crear entidad de stock en exposicion por item y unica ubicacion de venta (etapa actual).
-- [ ] Definir umbrales `min_exhibicion` y `max_exhibicion` por item-ubicacion.
-- [ ] Implementar sugerencia de reposicion desde almacen a exposicion (manual/semiautomatica).
-- [ ] Reposicion de exposicion: ejecucion manual con sugerencia automatica.
-- [ ] Incluir doble sugerencia en alerta: `hasta_max` y `por_promedio_7_dias`.
 - [x] Crear entidad de stock en exposicion por item y unica ubicacion de venta (etapa actual).
 - [x] Definir umbrales `min_exhibicion` y `max_exhibicion` por item-ubicacion.
 - [x] Implementar sugerencia de reposicion desde almacen a exposicion (manual/semiautomatica).
 - [x] Reposicion de exposicion: ejecucion manual con sugerencia automatica.
 - [x] Incluir doble sugerencia en alerta: `hasta_max` y `por_promedio_7_dias`.
 - [x] Alertar quiebre y sobrestock de exposicion.
-- [ ] Alertar bajo stock en inventario general por tipo de producto.
-- [ ] Subfase 3.1: compatibilidad con productos de tienda y negocios de venta directa.
+- [x] Alertar bajo stock en inventario general por tipo de producto.
+- [x] Subfase 3.1: compatibilidad con productos de tienda y negocios de venta directa.
 
 ## Fase 4 - Produccion en proceso (WIP) y produccion terminada
 
@@ -257,7 +268,7 @@ Objetivo: mantener trazabilidad de insumos parcialmente consumidos hasta su cier
 - [x] Permitir remanente en WIP y su consumo en multiples elaboraciones.
 - [x] Permitir que un producto terminado pase a subproducto en WIP para nuevas elaboraciones.
 - [x] Permitir baja de WIP por merma (`rotura`, `deterioro`, `caducidad`, `otros`).
-- [ ] Fecha de vencimiento en WIP opcional por producto; si aplica, hereda o referencia caducidad de inventario.
+- [x] Fecha de vencimiento en WIP opcional por producto; si aplica, hereda o referencia caducidad de inventario.
 - [x] Permitir uso dual del subproducto WIP: venta directa o consumo en nuevas recetas.
 - [x] Restringir retorno de salidas a almacen (sin flujo de devolucion a almacen en esta etapa).
 - [x] Subfase 4.1: caso restaurante/bar/cafeteria (ej. consumo parcial de lata).
@@ -270,15 +281,15 @@ Objetivo: calcular stock y costo de forma consistente por negocio.
 
 ### Entregables 5
 
-- [ ] Definir matriz de conversion de unidades por item (entrada vs salida).
-- [ ] Soportar salida fraccionada de unidad de entrada sin perdida de precision.
-- [ ] Definir regla de redondeo por tipo de unidad (inicial: `g` 2 decimales, `ml` 2 decimales).
-- [ ] En conversiones no exactas, registrar motivo obligatorio.
-- [ ] Implementar FEFO en salidas con FIFO como desempate en misma caducidad.
-- [ ] Para no perecederos, aplicar FIFO sin lotes.
-- [ ] Calcular stock disponible, stock comprometido y stock virtual.
-- [ ] Registrar costo unitario vigente por item y costo de salida por movimiento.
-- [ ] Validar no negativos con bloqueo de salida sin saldo.
+- [x] Definir matriz de conversion de unidades por item (entrada vs salida).
+- [x] Soportar salida fraccionada de unidad de entrada sin perdida de precision.
+- [x] Definir regla de redondeo por tipo de unidad (inicial: `g` 2 decimales, `ml` 2 decimales).
+- [x] En conversiones no exactas, registrar motivo obligatorio.
+- [x] Implementar FEFO en salidas con FIFO como desempate en misma caducidad.
+- [x] Para no perecederos, aplicar FIFO sin lotes.
+- [x] Calcular stock disponible, stock comprometido y stock virtual.
+- [x] Registrar costo unitario vigente por item y costo de salida por movimiento.
+- [x] Validar no negativos con bloqueo de salida sin saldo.
 
 ## Fase 6 - Integracion robusta con ventas/recetas
 
@@ -286,13 +297,13 @@ Objetivo: sincronizar consumo real desde ventas sin descuadres de inventario.
 
 ### Entregables 6
 
-- [ ] Mapear receta -> materias primas con equivalencias de unidad robustas.
-- [ ] Leer desde ficha tecnica: raciones y consumos de insumos.
+- [x] Mapear receta -> materias primas con equivalencias de unidad robustas.
+- [x] Leer desde ficha tecnica: raciones y consumos de insumos.
 - [x] Leer desde `Product`: bandera `puede_ser_subproducto` aplicable a todos los negocios.
 - [x] Leer desde `Product`: bandera `va_a_exposicion` (default `False`) para decidir ubicacion de produccion terminada.
-- [ ] Descontar consumo automaticamente al confirmar venta.
-- [ ] Revertir consumo en anulaciones/correcciones de venta.
-- [ ] Detectar y reportar ventas con receta incompleta o materia prima inexistente.
+- [x] Descontar consumo automaticamente al confirmar venta.
+- [x] Revertir consumo en anulaciones/correcciones de venta.
+- [x] Detectar y reportar ventas con receta incompleta o materia prima inexistente.
 
 ## Fase 7 - Compras, entradas y lotes
 
@@ -300,11 +311,11 @@ Objetivo: formalizar entrada de inventario con soporte documental y trazabilidad
 
 ### Entregables 7
 
-- [ ] Flujo de recepcion de compra con fecha, proveedor, documento y costo.
-- [ ] Hacer obligatorio campo `documento` en entradas de inventario (base de tarjeta de estiba).
-- [ ] Soporte de lotes (fecha, unidad, factor de conversion, costo).
-- [ ] Registro de ajustes positivos/negativos con motivo obligatorio.
-- [ ] Recalculo de costo medio tras cada entrada valida.
+- [x] Flujo de recepcion de compra con fecha, proveedor, documento y costo.
+- [x] Hacer obligatorio campo `documento` en entradas de inventario (base de tarjeta de estiba).
+- [x] Soporte de lotes (fecha, unidad, factor de conversion, costo).
+- [x] Registro de ajustes positivos/negativos con motivo obligatorio.
+- [x] Recalculo de costo medio tras cada entrada valida.
 
 ## Fase 8 - Mermas, caducidad y control preventivo
 
@@ -312,12 +323,12 @@ Objetivo: reducir perdida operativa con reglas preventivas.
 
 ### Entregables 8
 
-- [ ] Registrar merma tipificada con causa y responsable.
-- [ ] Alertas por stock minimo y proximidad de vencimiento.
-- [ ] Bloqueo o alerta configurable ante consumo que rompa stock minimo.
-- [ ] Evidencia documental opcional en registro de merma.
-- [ ] Soportar evidencia de merma en texto y/o archivo/foto.
-- [ ] Reporte de merma por item, causa y periodo.
+- [x] Registrar merma tipificada con causa y responsable.
+- [x] Alertas por stock minimo y proximidad de vencimiento.
+- [x] Bloqueo o alerta configurable ante consumo que rompa stock minimo.
+- [x] Evidencia documental opcional en registro de merma.
+- [x] Soportar evidencia de merma en texto y/o archivo/foto.
+- [x] Reporte de merma por item, causa y periodo.
 
 ## Fase 9 - Conteo fisico y conciliacion
 
@@ -325,10 +336,10 @@ Objetivo: cerrar brecha entre stock teorico y stock fisico.
 
 ### Entregables 9
 
-- [ ] Flujo de conteo ciclico por ubicacion/item.
-- [ ] Conciliacion con propuesta automatica de ajuste.
-- [ ] Registro de evidencia del conteo (usuario, fecha, observacion).
-- [ ] Ajustes sin flujo de aprobacion por umbral en esta etapa (umbral se modifica manualmente cuando aplique).
+- [x] Flujo de conteo ciclico por ubicacion/item.
+- [x] Conciliacion con propuesta automatica de ajuste.
+- [x] Registro de evidencia del conteo (usuario, fecha, observacion).
+- [x] Ajustes sin flujo de aprobacion por umbral en esta etapa (umbral se modifica manualmente cuando aplique).
 
 ## Fase 10 - Reportes operativos y financieros
 
@@ -336,13 +347,13 @@ Objetivo: convertir inventario en herramienta de decision diaria.
 
 ### Entregables 10
 
-- [ ] Kardex valorizado por item y periodo.
-- [ ] Reporte de rotacion y dias de cobertura.
-- [ ] Reporte de quiebres de stock y riesgo de quiebre.
-- [ ] Reporte de costo de consumo asociado a ventas.
-- [ ] Tarjeta de estiba por item/lote/ubicacion con saldo corrida.
-- [ ] Tarjeta de estiba mostrando columna `documento` desde movimiento/entrada.
-- [ ] Sin exportacion en etapa actual (consulta en pantalla/API).
+- [x] Kardex valorizado por item y periodo.
+- [x] Reporte de rotacion y dias de cobertura.
+- [x] Reporte de quiebres de stock y riesgo de quiebre.
+- [x] Reporte de costo de consumo asociado a ventas.
+- [x] Tarjeta de estiba por item/lote/ubicacion con saldo corrida.
+- [x] Tarjeta de estiba mostrando columna `documento` desde movimiento/entrada.
+- [x] Sin exportacion en etapa actual (consulta en pantalla/API).
 
 ## Fase 11 - UX/UI y modularidad tecnica
 
@@ -350,10 +361,10 @@ Objetivo: modernizar experiencia de inventario y reducir friccion operativa.
 
 ### Entregables 11
 
-- [ ] Auditar vistas actuales de inventario y consumo.
-- [ ] Extraer partials reutilizables para formularios, tabla y paneles.
-- [ ] Incorporar HTMX para altas/ediciones/ajustes sin recargas completas.
-- [ ] Mantener fallback clasico y consistencia visual con el sistema actual.
+- [x] Auditar vistas actuales de inventario y consumo.
+- [x] Extraer partials reutilizables para formularios, tabla y paneles.
+- [x] Incorporar HTMX para altas/ediciones/ajustes sin recargas completas.
+- [x] Mantener fallback clasico y consistencia visual con el sistema actual.
 
 ## Fase 12 - Reproceso historico y hardening
 
@@ -361,10 +372,10 @@ Objetivo: asegurar confiabilidad antes del cierre de implementacion.
 
 ### Entregables 12
 
-- [ ] Script de reconstruccion historica de stock por negocio.
-- [ ] Validacion de consistencia entre movimientos, existencias y reportes.
-- [ ] Pruebas smoke end-to-end en entorno `webdev`.
-- [ ] Checklist de regresion cruzada con ingresos/reportes.
+- [x] Script de reconstruccion historica de stock por negocio.
+- [x] Validacion de consistencia entre movimientos, existencias y reportes.
+- [x] Pruebas smoke end-to-end en entorno `webdev`.
+- [x] Checklist de regresion cruzada con ingresos/reportes.
 
 ## Fase 13 - Integracion contable de inventario
 
@@ -404,24 +415,16 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 
 ### Bloque inmediato (siguiente sprint tecnico)
 
-- [ ] F1.1 Definir taxonomia de negocio y flujos activos por negocio (exposicion/WIP).
-- [ ] F1.2 Definir jerarquia de mercancias (`generico`/`especifico`/`variante`) y catalogo de unidades.
-- [ ] F1.3 Diseñar tabla `insumos` como base de declaracion y vinculo con receta/inventario.
-- [ ] F1.4 Modelar restricciones de unicidad de variante por negocio y relaciones de catalogo.
-- [ ] F2.1 Diseñar modelo de movimiento de inventario con destino (`sales_floor`/`wip`).
-- [ ] F2.2 Confirmar lote automatico y tarjeta de estiba por `item+lote`.
-- [ ] F3.1 Modelar stock de exposicion y reglas min/max de reposicion.
-- [ ] F3.2 Aplicar descuento inmediato del almacen al trasladar a exposicion.
-- [ ] F3.3 Implementar alerta con doble sugerencia (`hasta_max`, `promedio_7_dias`).
-- [ ] F4.1 Modelar flujo WIP con consumo parcial y merma de remanentes.
-- [ ] F4.2 Modelar subproductos en WIP para consumo en elaboraciones posteriores.
-- [ ] F4.3 Permitir subproducto WIP para venta directa y consumo en recetas.
-- [x] F4.4 Implementar `va_a_exposicion` para produccion terminada sin cambio de cuenta contable.
-- [x] F13.1 Diseñar asientos contables por transicion monetaria de inventario.
-- [x] F13.2 Diseñar nomenclador general y selector de cuentas por negocio.
-- [x] F13.3 Diseñar subcuentas por negocio con asociacion obligatoria a cuenta padre y separacion de mermas por tipo.
-- [x] F13.4 Diseñar desglose contable de ventas mixtas (`1586`/`1587`).
-- [x] F13.5 Diseñar y aplicar auditoria de adopciones y asociaciones contables por negocio.
+- [x] F2.3 Cerrar idempotencia automatica de movimientos generados desde ventas (referencias estables por venta/detalle).
+- [x] F3.1 Cerrar compatibilidad explicita para negocio tipo tienda/venta directa.
+- [x] F4.5 Agregar vencimiento opcional en WIP y reglas de herencia/referencia desde lote origen.
+- [x] F5.1 Implementar matriz de conversion por item y reglas de redondeo `g/ml`.
+- [x] F5.2 Implementar FEFO real en salidas y FIFO como desempate/alternativa para no perecederos.
+- [x] F5.3 Exponer stock disponible/comprometido/virtual por item.
+- [x] F6.1 Integrar descuento automatico por confirmacion de venta y reversa por anulacion/correccion.
+- [x] F6.2 Endurecer validacion de receta incompleta o materia prima inexistente en flujo operativo.
+- [x] F10.1 Publicar kardex valorizado y reporte de costo de consumo asociado a ventas.
+- [x] F12.1 Crear script de reconstruccion historica de stock y validaciones de consistencia.
 
 ### Paquete de arranque (ejecucion inmediata)
 
@@ -458,18 +461,15 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 - [x] F1.2 Cerrar taxonomia de negocios con reglas operativas por actividad.
 - [x] F1.4/F1.5/F1.6 Completar separacion catalogo vs entrada y unicidad operativa de `producto_variante` por negocio.
 - [x] F2.1/F2.2 Completar tarjeta de estiba por `item+lote` y lote automatico cuando aplique.
-- [x] F3.1/F3.2/F3.3 Implementar stock de exposicion y reposicion con alertas `hasta_max` y `promedio_7_dias`.
+- [x] F3.2/F3.3 Implementar stock de exposicion y reposicion con alertas `hasta_max` y `promedio_7_dias`.
 - [x] F4.2/F4.3/F4.4 Completar flujo de subproducto WIP y reglas de ubicacion de produccion terminada.
 - [x] F13 Cerrar separacion de asiento de merma por tipo (`materias_primas/materiales` vs `produccion_terminada`).
 
 ### Bloque posterior
 
-- [ ] F5.1 Implementar conversion de unidades y salida fraccionada segura.
-- [ ] F6.1 Integrar receta/ventas con consumos idempotentes y reversibles.
-- [ ] F7.1 Crear flujo de entrada de compras con evidencia documental y lotes.
-- [ ] F8.1 Implementar mermas y politicas por causa/actividad.
-- [ ] F9.1 Conteo ciclico y conciliacion con trazabilidad de responsable.
-- [ ] F10.1 Publicar reportes de tarjeta de estiba, reposicion y WIP.
+- [x] F10.2 Publicar reportes de rotacion, cobertura y riesgo de quiebre.
+- [x] F11.1 Ejecutar modernizacion UX/UI de inventario con partials y HTMX.
+- [x] F12.2 Cerrar checklist de hardening y regresion cruzada con ingresos/reportes.
 
 ## 7) Bitacora de avance
 
@@ -518,6 +518,8 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 - 2026-03-09: Se completa el renombre transversal `product_surtido` -> `product_variant` (modelo, servicio, rutas, pruebas y migraciones de compatibilidad legacy `f5d2a1b3c4e6` + `f6a7b8c9d0e1`) y se valida en `webdev` con corrida completa `21 tests OK`.
 - 2026-03-09: Se implementa `lot_code` en `InventoryMovement` con migracion `f7b1c2d3e4f5`, autogeneracion de lote para compras sin lote manual y endpoint de tarjeta de estiba (`/movement/stowage-card`) con saldo corrido por `item+lote`.
 - 2026-03-09: Se agregan pruebas para lote/tarjeta de estiba en `tests/services/test_inventory_service.py` y `tests/routes/test_inventory_movement_routes.py`; corrida consolidada en `webdev` queda en `25 tests OK`.
+- 2026-03-09: Se implementa F9 de conteo ciclico con nuevo modelo `InventoryCycleCount` (migracion `f22e5f6a7b8c`), incluyendo propuesta automatica por diferencia teorico/fisico y conciliacion via movimiento `adjustment` sin flujo de aprobacion por umbral.
+- 2026-03-09: Se exponen endpoints de F9 (`/cycle-count/list`, `/cycle-count/create`, `/cycle-count/<id>/reconcile`) y cobertura en `tests/services/test_inventory_cycle_count_rules.py` y `tests/routes/test_inventory_cycle_count_routes.py`; corrida completa en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` queda en `81 tests OK`.
 - 2026-03-09: Se implementa control de exposicion con nueva entidad `InventorySalesFloorStock` (migracion `f8a1b2c3d4e5`) y endpoints `/sales-floor/list`, `/sales-floor/configure`, `/sales-floor/transfer`, `/sales-floor/alerts`.
 - 2026-03-09: Se implementa traslado manual almacen -> exposicion con descuento inmediato en almacen via `transfer` a `sales_floor`, y alertas visuales con doble sugerencia (`hasta_max`, `promedio_7_dias`) mas indicadores de quiebre/sobrestock.
 - 2026-03-09: Se agregan pruebas para reglas y rutas de exposicion en `tests/services/test_inventory_sales_floor_rules.py` y `tests/routes/test_inventory_sales_floor_routes.py`; corrida consolidada en `webdev` queda en `30 tests OK`.
@@ -540,3 +542,63 @@ Objetivo: reflejar cada transicion de inventario/WIP/terminada en cuentas moneta
 - 2026-03-09: Se agrega cobertura de ruta para la vista de gestion contable en `tests/routes/test_inventory_accounting_manage_view.py` y la corrida consolidada en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`) queda en `49 tests OK`.
 - 2026-03-09: Se cierra pendiente F13 de merma contable separada: `waste` diferencia `materias_primas/materiales` (`warehouse -> waste_raw_materials`) y `produccion_terminada` (`finished_goods -> waste_finished_goods`) con contraparte de gasto `800` en ledger.
 - 2026-03-09: Se agregan pruebas de servicio para merma separada en `tests/services/test_inventory_accounting_ledger_rules.py` y la corrida consolidada en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`) queda en `51 tests OK`.
+- 2026-03-09: Se implementa regla de F7 para entradas de compra: `create_movement` exige `documento` cuando `movement_type="purchase"`, con normalizacion previa del valor para trazabilidad en tarjeta de estiba.
+- 2026-03-09: Se ajustan pruebas de rutas y smoke (`tests/routes/test_inventory_movement_routes.py`, `tests/smoke/test_inventory_flow_smoke.py`) y la corrida consolidada en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`) queda en `52 tests OK`.
+- 2026-03-09: Se implementa `F7.1` con flujo dedicado de recepcion de compra (`/purchase-receipt/create`) exigiendo `fecha` (`receipt_date`), `proveedor` (`supplier_name`), `documento` y `costo` (`unit_cost`), con persistencia en `InventoryMovement`.
+- 2026-03-09: Se agrega columna `supplier_name` en `inventory_movement` (migracion `fd5e6f7a8b9c`) y soporte en servicio/rutas para consulta de movimientos y tarjeta de estiba con trazabilidad de proveedor.
+- 2026-03-09: Se agregan pruebas de servicio y ruta (`tests/services/test_inventory_purchase_receipt_rules.py`, `tests/routes/test_inventory_purchase_receipt_routes.py`) y la corrida consolidada en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`) queda en `56 tests OK`.
+- 2026-03-09: Se completa soporte de lotes en recepcion de compras con metadatos `lot_date`, `lot_unit` y `lot_conversion_factor`, incluyendo validaciones de coherencia (unidad/factor) en `InventoryService.create_movement`.
+- 2026-03-09: Se agrega migracion `fe6f7a8b9c0d` para persistir metadatos de lote en `inventory_movement` y se extienden endpoints (`/movement/create`, `/purchase-receipt/create`, `/movement/stowage-card`) para capturar/consultar trazabilidad de lote.
+- 2026-03-09: Se actualizan y agregan pruebas (`tests/routes/test_inventory_movement_routes.py`, `tests/services/test_inventory_service.py`, `tests/services/test_inventory_purchase_receipt_rules.py`, `tests/routes/test_inventory_purchase_receipt_routes.py`); corrida consolidada en `webdev` se mantiene en `56 tests OK`.
+- 2026-03-09: Se implementa ajuste de inventario con polaridad (`adjustment_kind`: `positive`/`negative`) y motivo obligatorio para `movement_type="adjustment"`; las salidas negativas descuentan stock y contabilizan `operational_out`.
+- 2026-03-09: Se agrega migracion `ff7a8b9c0d1e` para persistir `adjustment_kind` en `inventory_movement`; se extienden `InventoryService` y endpoints de inventario para registrar/consultar el tipo de ajuste, incluida tarjeta de estiba.
+- 2026-03-09: Se agregan pruebas `tests/services/test_inventory_adjustment_rules.py` y se amplian `tests/routes/test_inventory_movement_routes.py` con cobertura de ajuste negativo y motivo obligatorio; corrida consolidada en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`) queda en `60 tests OK`.
+- 2026-03-09: Se implementa recálculo de costo medio ponderado por `InventoryItem` tras entradas válidas con costo (`purchase` y ajustes positivos con `unit_cost/total_cost`), manteniendo el costo medio sin cambios en salidas y ajustes negativos.
+- 2026-03-09: Se agrega migracion `f08a9b0c1d2e` para persistir `average_unit_cost` en `inventory_item` y se integra el cálculo en `InventoryService.create_movement`.
+- 2026-03-09: Se agregan pruebas `tests/services/test_inventory_average_cost_rules.py` (promedio por `unit_cost`, promedio por `total_cost` y no afectación en ajuste negativo); corrida consolidada en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`) queda en `63 tests OK`.
+- 2026-03-09: Se implementa registro de merma tipificada en `movement_type="waste"` con causa obligatoria (`rotura`, `deterioro`, `caducidad`, `otros`) y responsable obligatorio, manteniendo `waste_evidence` como evidencia opcional en texto.
+- 2026-03-09: Se agrega migracion `f19b2c3d4e5f` para persistir `waste_reason`, `waste_responsible` y `waste_evidence` en `inventory_movement`, con soporte en servicio y rutas (`/movement/create`, `/movement/list`, `/movement/stowage-card`).
+- 2026-03-09: Se agregan pruebas `tests/services/test_inventory_waste_rules.py` y se amplia `tests/routes/test_inventory_movement_routes.py` para validar merma tipificada; corrida consolidada en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`) queda en `66 tests OK`.
+- 2026-03-09: Se implementan alertas preventivas de inventario general (`/alerts/preventive`) con bajo stock contra `min_stock` y proximidad de vencimiento por ventana configurable (`days_to_expiration`), incluyendo filtro por tipo de uso (`usage_type`) para alertas por tipo de producto.
+- 2026-03-09: Se agregan pruebas `tests/services/test_inventory_preventive_alert_rules.py` y `tests/routes/test_inventory_preventive_alert_routes.py`; corrida consolidada en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`) queda en `70 tests OK`.
+- 2026-03-09: Se implementa politica configurable por negocio ante ruptura de stock minimo (`inventory_min_stock_policy`: `alert`/`block`); en salidas (`consumption`, `transfer`, `waste`, ajuste negativo) se bloquea o permite con bandera de alerta segun configuracion.
+- 2026-03-09: Se agrega migracion `f20c3d4e5f6a` para persistir politica de stock minimo en `business` y se extiende respuesta de `/movement/create` con metadatos (`min_stock_alert`, `min_stock_policy`, `projected_stock`, `min_stock_threshold`).
+- 2026-03-09: Se agregan pruebas `tests/services/test_inventory_min_stock_policy_rules.py` y se ajusta `tests/routes/test_inventory_movement_routes.py`; corrida consolidada en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`) queda en `72 tests OK`.
+- 2026-03-09: Se implementa soporte de evidencia documental opcional de merma en texto y archivo/foto, agregando `waste_evidence_file_url` con validacion de formato permitido (`.jpg`, `.jpeg`, `.png`, `.webp`, `.pdf`) para `movement_type="waste"`.
+- 2026-03-09: Se agrega migracion `f21d4e5f6a7b` para persistir `waste_evidence_file_url` en `inventory_movement` y se extienden endpoints (`/movement/create`, `/movement/list`, `/movement/stowage-card`) para capturar/consultar evidencia de merma.
+- 2026-03-09: Se amplian pruebas de merma en `tests/services/test_inventory_waste_rules.py` y `tests/routes/test_inventory_movement_routes.py`; corrida consolidada en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`) queda en `74 tests OK`.
+- 2026-03-09: Se implementa reporte de merma por item, causa y periodo con agregados (`events`, `total_quantity`, `total_amount`, `last_movement_date`) sobre movimientos `waste`, incluyendo filtros por fecha, item y causa (`/movement/waste-report`).
+- 2026-03-09: Se agregan pruebas `tests/services/test_inventory_waste_report_rules.py` y `tests/routes/test_inventory_waste_report_routes.py`; corrida consolidada en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`) queda en `77 tests OK`.
+- 2026-03-09: Se realiza levantamiento exhaustivo de cumplimiento real por fase (modelos, servicios, rutas, migraciones y pruebas) y se normaliza el plan para eliminar contradicciones (`[ ]` vs `[x]`) en F2/F3/F5/F10/F12 y en el tablero de ejecucion activo.
+- 2026-03-09: Se actualiza estado auditado por fase: completas `F1`, `F7`, `F8`, `F9`, `F13`; parciales `F2`, `F3`, `F4`, `F5`, `F6`, `F10`, `F12`; pendiente `F11`.
+- 2026-03-09: Se completa `F4.5` con vencimiento opcional en `InventoryWipBalance` (`expiration_date`, `expiration_source`) via migracion `f23f6a7b8c9d`; en `/wip/create` se acepta `expiration_date` manual y, sin fecha manual, se hereda por referencia desde `lot_date` del inventario origen cuando existe.
+- 2026-03-09: Se extienden respuestas de `/wip/list` y `/wip/create` con trazabilidad de vencimiento y se agregan pruebas en `tests/services/test_inventory_service.py` y `tests/routes/test_inventory_wip_routes.py`; corrida completa en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` queda en `84 tests OK`.
+- 2026-03-09: Se completa `F2.3` con idempotencia automatica para movimientos referenciados a ventas en `InventoryService.create_movement`, generando `idempotency_key` deterministico cuando no se envia clave explicita (`reference_type` de venta + `reference_id` + item + tipo + destino).
+- 2026-03-09: Se agregan pruebas `tests/services/test_inventory_sale_idempotency_rules.py` para clave automatica y retorno de movimiento existente en reintentos; corrida completa en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` queda en `86 tests OK`.
+- 2026-03-09: Se completa `F3.1` con reglas explicitas de compatibilidad por flujo: `transfer_to_sales_floor` valida flujo de exposicion habilitado y bloquea items `production_input`; `create_wip_balance` valida flujo WIP habilitado y bloquea items `sale_direct`.
+- 2026-03-09: Se agregan pruebas en `tests/services/test_inventory_sales_compatibility_rules.py` y ajustes en `tests/services/test_inventory_sales_floor_rules.py`, `tests/services/test_inventory_service.py` y `tests/smoke/test_inventory_flow_smoke.py`; corrida completa en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` queda en `90 tests OK`.
+- 2026-03-09: Se completa `F5.1` con matriz de conversion por item (`InventoryUnitConversion`) y redondeo por unidad en movimientos de inventario, mediante migracion `f24a7b8c9d0e_add_inventory_unit_conversion_matrix.py` e integracion en `InventoryService.create_movement`.
+- 2026-03-09: Se agregan pruebas `tests/services/test_inventory_unit_conversion_rules.py` y se asegura compatibilidad con fixtures legacy en servicio/tests; corrida completa en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` queda en `92 tests OK`.
+- 2026-03-09: Se completa `F5.3` exponiendo posicion consolidada de stock por item (`stock_available`, `stock_committed`, `stock_virtual`) con desglose de compromiso en `sales_floor` y `wip` mediante `InventoryService.list_stock_position` y endpoint `GET /inventory/stock/position`.
+- 2026-03-09: Se agregan pruebas `tests/services/test_inventory_stock_position_rules.py` y `tests/routes/test_inventory_stock_position_routes.py`; corrida completa en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` queda en `96 tests OK`.
+- 2026-03-09: Se completa `F5.2` con FEFO real para salidas con lote/fecha de vencimiento y FIFO como desempate; para no perecederos se aplica FIFO sin lotes mediante autoseleccion de contexto de salida en `InventoryService.create_movement`.
+- 2026-03-09: Se agrega cobertura `tests/services/test_inventory_fefo_fifo_rules.py` y se ajusta persistencia de `valuation_method` en ledger para salidas (`fefo`/`fifo`); corrida completa en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` queda en `98 tests OK`.
+- 2026-03-09: Se completa `F6.1` integrando sincronizacion de inventario por linea de venta en `IncomeManagementService` con reconciliacion por delta contra movimientos ya sincronizados (`sale_inventory_line`), aplicando consumo automatico en ventas `completed` y reversa automatica en anulaciones/correcciones.
+- 2026-03-09: Se agregan pruebas `tests/services/test_income_inventory_sync_rules.py` (consumo, reversa y hooks en update/remove); corrida completa en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` queda en `102 tests OK`.
+- 2026-03-09: Se completa `F6.2` endureciendo validacion operativa de receta en `IncomeManagementService`: se detecta y reporta receta incompleta (sin materias primas, linea sin materia prima, cantidad por unidad invalida) y materia prima inexistente al sincronizar inventario desde ventas.
+- 2026-03-09: Se amplian pruebas en `tests/services/test_income_inventory_sync_rules.py` para errores de receta y reporte agregado por venta; corrida completa en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` queda en `105 tests OK`.
+- 2026-03-10: Se completa `F12.1` incorporando reconstruccion historica de stock en `InventoryService` (`rebuild_stock_from_history`) y validacion transversal (`validate_stock_consistency_from_history`) con reporte de descuadres, saldos negativos historicos e items faltantes.
+- 2026-03-10: Se agrega script operativo `scripts/rebuild_inventory_stock_from_history.py` (modo dry-run/apply por negocio o global) y cobertura en `tests/services/test_inventory_rebuild_history_rules.py`; corrida completa en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` queda en `108 tests OK`.
+- 2026-03-09: Se completa `F10.1` con reportes operativos de inventario en API: kardex valorizado por item/periodo (`GET /inventory/accounting/kardex-valued`) y costo de consumo asociado a ventas (`GET /inventory/accounting/sale-consumption-cost`) sobre movimientos sincronizados de venta.
+- 2026-03-09: Se agregan pruebas en `tests/services/test_inventory_kardex_cost_reports_rules.py` y se extienden rutas en `tests/routes/test_inventory_accounting_routes.py`; corrida completa en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` queda en `112 tests OK`.
+- 2026-03-10: Se completa `F10.2` con reportes operativos de rotacion/cobertura (`GET /inventory/accounting/turnover-coverage`) y quiebres/riesgo (`GET /inventory/accounting/stockout-risk`), calculados desde movimientos historicos en ventana configurable.
+- 2026-03-10: Se completa tarjeta de estiba por `item/lote/ubicacion` extendiendo `GET /inventory/movement/stowage-card` con filtro `location` y saldo corrido por ubicacion operativa.
+- 2026-03-10: Se agregan pruebas en `tests/services/test_inventory_operational_reports_rules.py` y se amplian `tests/routes/test_inventory_accounting_routes.py` + `tests/routes/test_inventory_movement_routes.py`; corrida completa en `webdev` con `python -m unittest discover -s tests -p 'test_*.py'` queda en `117 tests OK`.
+- 2026-03-10: Se completa `F12.2` con checklist automatizada de regresion cruzada entre ingresos/reportes e inventario contable en `tests/smoke/test_inventory_income_reports_cross_regression.py`, validando en un mismo flujo `inventory-consumption`, `kardex-valued`, `sale-consumption-cost`, `turnover-coverage` y `stockout-risk`.
+- 2026-03-10: Se valida cierre de `F12.2` con corrida focal (`9 tests OK`) y corrida completa en `webdev` (`python -m unittest discover -s tests -p 'test_*.py'`) con `118 tests OK`.
+- 2026-03-10: Se inicia `F11.1` con auditoria de vistas actuales de inventario/consumo y matriz de refactor en `docs/f11_inventory_views_audit.md` (rutas auditadas: `/inventory/item/list`, `/inventory/accounting/manage`, `/report/inventory-consumption/view`).
+- 2026-03-10: Se completa `F11.2` extrayendo partials reutilizables en inventario/consumo (`inventory/partials/_item_form`, `_item_table`, `_account_catalog_table`, `_account_audit_table`, y `report/partials/_inventory_consumption_filter`, `_inventory_consumption_results`) manteniendo flujo clasico sin cambios funcionales; validado con `5 tests OK` focales y `118 tests OK` en suite completa.
+- 2026-03-10: Se completa `F11.3` incorporando HTMX en altas/ediciones de items (`/inventory/item/list`, `/inventory/<id>`), ajustes operativos de adopcion/desadopcion contable (`/inventory/accounting/manage`) y filtro de consumo (`/report/inventory-consumption/view`) con respuesta parcial por `HX-Request`; validado con pruebas focales (`8 tests OK`) y suite completa (`122 tests OK`).
+- 2026-03-10: Se completa `F11.4/F11.5` validando fallback clasico (sin `HX-Request`) y consistencia visual base por contenedores/partials en vistas de inventario/consumo; se agregan pruebas `tests/routes/test_inventory_item_list_htmx.py` (fallback), `tests/routes/test_reports_inventory_consumption_view_htmx.py` (fallback) y `tests/routes/test_inventory_ui_consistency_check.py` (checklist minima de estructura); evidencia final: `11 tests OK` focales y `127 tests OK` en suite completa.
+- 2026-03-10: Se completa pendiente de `F5` endureciendo `InventoryService.create_movement` para exigir motivo (`notes`) cuando una conversion de unidades sea no exacta por redondeo, preservando conversion por matriz de unidad; se agrega cobertura en `tests/services/test_inventory_unit_conversion_rules.py` y validacion focal (`12 tests OK`).
+- 2026-03-10: Se completa `F6` robusteciendo el mapeo receta -> consumo de inventario en `IncomeManagementService` con equivalencias de unidad por item (via `InventoryService._resolve_quantity_in_item_base_unit`) y lectura de raciones desde ficha tecnica (`Product.is_batch_prepared` + `Product.batch_size`); se amplian pruebas en `tests/services/test_income_inventory_sync_rules.py` y se valida regresion completa en `webdev` con `python -m unittest discover -s tests` (`130 tests OK`).

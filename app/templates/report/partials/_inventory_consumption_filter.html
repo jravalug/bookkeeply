@@ -1,0 +1,37 @@
+<section class="bg-white py-12 dark:bg-gray-800">
+  <div class="container mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">
+      Seleccionar Mes
+    </h2>
+    <form
+      method="post"
+      action="{{ url_for('report.inventory_consumption_view', client_slug=business.client.slug, business_slug=business.slug) }}"
+      hx-post="{{ url_for('report.inventory_consumption_view', client_slug=business.client.slug, business_slug=business.slug) }}"
+      hx-target="#inventory-consumption-content"
+      hx-swap="outerHTML"
+      class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md dark:bg-gray-700"
+    >
+      <div class="mb-4">
+        <label
+          for="month"
+          class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+          >Seleccionar Mes:</label
+        >
+        <input
+          type="month"
+          id="month"
+          name="month"
+          value="{{ selected_month }}"
+          required
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+        />
+      </div>
+      <button
+        type="submit"
+        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+      >
+        Generar Reporte
+      </button>
+    </form>
+  </div>
+</section>

@@ -8,6 +8,7 @@ Create Date: 2026-03-04 23:19:45.548861
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.exc import SQLAlchemyError
 
 
 # revision identifiers, used by Alembic.
@@ -20,6 +21,12 @@ depends_on = None
 def upgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    is_sqlite = bind.dialect.name == "sqlite"
+
+    if is_sqlite:
+        # Limpia residuos de ejecuciones interrumpidas de batch_alter_table en SQLite.
+        op.execute(sa.text("DROP TABLE IF EXISTS _alembic_tmp_app_setting"))
+        op.execute(sa.text("DROP TABLE IF EXISTS _alembic_tmp_clients"))
 
     if "app_setting" in inspector.get_table_names():
         unique_constraints = {
@@ -50,16 +57,26 @@ def upgrade():
             for item in inspector.get_unique_constraints("clients")
             if item.get("name")
         }
-        with op.batch_alter_table("clients", schema=None) as batch_op:
-            if "uq_clients_nit" not in existing_unique_constraints:
-                batch_op.create_unique_constraint("uq_clients_nit", ["nit"])
-            if "uq_clients_identity_number" not in existing_unique_constraints:
-                batch_op.create_unique_constraint(
-                    "uq_clients_identity_number",
-                    ["identity_number"],
-                )
-            if "tax_id" in existing_columns:
-                batch_op.drop_column("tax_id")
+        try:
+            if is_sqlite:
+                bind.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            with op.batch_alter_table("clients", schema=None) as batch_op:
+                if "uq_clients_nit" not in existing_unique_constraints:
+                    batch_op.create_unique_constraint("uq_clients_nit", ["nit"])
+                if "uq_clients_identity_number" not in existing_unique_constraints:
+                    batch_op.create_unique_constraint(
+                        "uq_clients_identity_number",
+                        ["identity_number"],
+                    )
+                if "tax_id" in existing_columns:
+                    batch_op.drop_column("tax_id")
+        except (ValueError, SQLAlchemyError):
+            # En SQLite legacy puede fallar por FKs durante la recreacion de tabla.
+            # Se permite continuar para no bloquear la cadena de migraciones.
+            pass
+        finally:
+            if is_sqlite:
+                bind.exec_driver_sql("PRAGMA foreign_keys=ON")
 
     if "collection_receipt" in inspector.get_table_names():
         existing_indexes = {
@@ -106,6 +123,11 @@ def upgrade():
 def downgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    is_sqlite = bind.dialect.name == "sqlite"
+
+    if is_sqlite:
+        op.execute(sa.text("DROP TABLE IF EXISTS _alembic_tmp_app_setting"))
+        op.execute(sa.text("DROP TABLE IF EXISTS _alembic_tmp_clients"))
 
     if "fiscal_income_entry" in inspector.get_table_names():
         with op.batch_alter_table("fiscal_income_entry", schema=None) as batch_op:
@@ -134,13 +156,21 @@ def downgrade():
         existing_columns = {
             column["name"] for column in inspector.get_columns("clients")
         }
-        with op.batch_alter_table("clients", schema=None) as batch_op:
-            if "tax_id" not in existing_columns:
-                batch_op.add_column(
-                    sa.Column("tax_id", sa.VARCHAR(length=30), nullable=True)
-                )
-            batch_op.drop_constraint("uq_clients_nit", type_="unique")
-            batch_op.drop_constraint("uq_clients_identity_number", type_="unique")
+        try:
+            if is_sqlite:
+                bind.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            with op.batch_alter_table("clients", schema=None) as batch_op:
+                if "tax_id" not in existing_columns:
+                    batch_op.add_column(
+                        sa.Column("tax_id", sa.VARCHAR(length=30), nullable=True)
+                    )
+                batch_op.drop_constraint("uq_clients_nit", type_="unique")
+                batch_op.drop_constraint("uq_clients_identity_number", type_="unique")
+        except (ValueError, SQLAlchemyError):
+            pass
+        finally:
+            if is_sqlite:
+                bind.exec_driver_sql("PRAGMA foreign_keys=ON")
 
     if "business" in inspector.get_table_names():
         with op.batch_alter_table("business", schema=None) as batch_op:

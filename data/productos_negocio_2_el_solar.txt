@@ -1,0 +1,220 @@
+================================================================================
+LISTADO DE PRODUCTOS - El Solar (ID: 2)
+Generado: 17/03/2026 17:21:59
+Total de productos: 201
+================================================================================
+
+--- SIN CATEGORÍA ---
+  [  90] MASA DE CERDO                                 Precio:   975.00  Inactivo
+
+--- BEBIDA ---
+  [ 223] AGUA                                          Precio:   200.00  Inactivo
+  [  59] AGUA 250                                      Precio:   250.00  Inactivo
+  [  74] CERVEZA                                       Precio:   300.00  Inactivo
+  [ 224] CERVEZA 250                                   Precio:   250.00  Inactivo
+  [ 423] CERVEZA 350                                   Precio:   350.00  Inactivo
+  [ 432] CERVEZA 500                                   Precio:   500.00  Inactivo
+  [ 243] CERVEZA CRISTAL                               Precio:   350.00  Inactivo
+  [ 437] CERVEZA CRISTAL 500                           Precio:   500.00  Inactivo
+  [  83] JUGO DE CAJA                                  Precio:   300.00  Inactivo
+  [ 240] JUGO DE CAJA 250                              Precio:   250.00  Inactivo
+  [  89] MALTA                                         Precio:   350.00  Inactivo
+  [ 438] MALTA                                         Precio:   400.00  Inactivo
+  [ 318] REFRESCO DE LATA                              Precio:   250.00  Inactivo
+  [ 317] REFRESCO DE LATA  - NARANJA                   Precio:   250.00  Inactivo
+  [ 230] REFRESCO DE LATA - LIMON                      Precio:   250.00  Inactivo
+  [ 231] REFRESCO DE LATA - PIÑA                       Precio:   250.00  Inactivo
+
+--- COCTELERIA ---
+  [ 301] ARENA DE ORO                                  Precio:   250.00  Inactivo
+  [ 321] BATIDO                                        Precio:   190.00  Inactivo
+  [  66] BATIDO DE FRUTA BOMBBA                        Precio:   250.00  Inactivo
+  [ 312] BATIDO DE GUANABANA                           Precio:   250.00  Inactivo
+  [ 252] BATIDO DE GUAYABA                             Precio:   250.00  Inactivo
+  [  67] BATIDO DE MAMEY                               Precio:   250.00  Inactivo
+  [ 387] BATIDO DE MANGO                               Precio:   250.00  Inactivo
+  [ 428] BATIDO DE PLATANO                             Precio:   250.00  Inactivo
+  [ 290] BLOODY MARY                                   Precio:   475.00  Inactivo
+  [ 305] CAIPIRINHA                                    Precio:   300.00  Inactivo
+  [ 304] CAIPIRISSIMA                                  Precio:   300.00  Inactivo
+  [ 306] CAIPIROSKA                                    Precio:   300.00  Inactivo
+  [ 289] CHELADA                                       Precio:   440.00  Inactivo
+  [ 295] CUBA LIBRE                                    Precio:   500.00  Inactivo
+  [ 235] CUBANITO                                      Precio:   475.00  Inactivo
+  [ 297] CUBATA                                        Precio:   550.00  Inactivo
+  [ 236] DAIQUIRI                                      Precio:   340.00  Inactivo
+  [ 294] GIN-TONIC                                     Precio:   500.00  Inactivo
+  [ 293] HABANA LIBRE                                  Precio:   500.00  Inactivo
+  [ 292] HAVANA GREEN                                  Precio:   500.00  Inactivo
+  [ 124] JUGO DE FRUTA BOMBA                           Precio:   200.00  Inactivo
+  [ 227] JUGO DE GUANABANA                             Precio:   155.00  Inactivo
+  [ 125] JUGO DE GUAYABA                               Precio:   200.00  Inactivo
+  [ 126] JUGO DE MAMEY                                 Precio:   200.00  Inactivo
+  [ 385] JUGO DE MANGO                                 Precio:   200.00  Inactivo
+  [ 359] JUGO DE TOMATE NP                             Precio:   345.00  Inactivo
+  [ 127] JUGO DE TOMATE*                               Precio:   345.00  Inactivo
+  [ 307] LICOR                                         Precio:   250.00  Inactivo
+  [ 128] LIMONADA FRAPE                                Precio:   335.00  Inactivo
+  [ 244] MALTEADA                                      Precio:   535.00  Inactivo
+  [ 291] MARGARITA                                     Precio:   680.00  Inactivo
+  [ 302] MARY PICKFORD                                 Precio:   400.00  Inactivo
+  [  92] MICHELADA                                     Precio:   540.00  Inactivo
+  [ 300] MOJITO                                        Precio:   500.00  Inactivo
+  [  98] PIÑA COLADA                                   Precio:   250.00  Inactivo
+  [ 296] RON ALEXANDER                                 Precio:   415.00  Inactivo
+  [ 303] RON COLLINS                                   Precio:   315.00  Inactivo
+  [ 298] SANGRIA                                       Precio:   315.00  Inactivo
+  [ 299] SCREWDRIVER                                   Precio:   300.00  Inactivo
+
+--- COMIDA ---
+  [ 265] ACEITUNAS EN SU JUGO                          Precio:   635.00  Inactivo
+  [ 402] AGREGO DE AJO                                 Precio:   395.00  Inactivo
+  [ 407] AGREGO DE ATUN                                Precio:   640.00  Inactivo
+  [  57] AGREGO DE CEBOLLA                             Precio:   320.00  Inactivo
+  [ 405] AGREGO DE JAMON                               Precio:   315.00  Inactivo
+  [  58] AGREGO DE LIMON                               Precio:   250.00  Inactivo
+  [ 260] AGREGO DE LIMON 500                           Precio:   500.00  Inactivo
+  [ 403] AGREGO DE MANTEQUILLA                         Precio:   180.00  Inactivo
+  [ 323] AGREGO DE MAYONESA                            Precio:   235.00  Inactivo
+  [ 406] AGREGO DE QUESO                               Precio:   135.00  Inactivo
+  [ 404] AGREGO DE SALSA ROSA                          Precio:   155.00  Inactivo
+  [  60] AJIACO CAMAGÜEYANO                            Precio:   150.00  Inactivo
+  [ 250] ARROZ AMARILLO                                Precio:   195.00  Inactivo
+  [  62] ARROZ BLANCO                                  Precio:   125.00  Inactivo
+  [ 356] ARROZ BLANCO NP*                              Precio:   135.00  Inactivo
+  [  63] ARROZ CON POLLO                               Precio:   440.00  Inactivo
+  [  61] ARROZ FRITO                                   Precio:   840.00  Inactivo
+  [ 282] ARROZ FRITO ESPECIAL                          Precio:  2245.00  Inactivo
+  [  64] ARROZ IMPERIAL                                Precio:  1085.00  Inactivo
+  [  65] ARROZ MOROS Y CRISTIANOS                      Precio:   165.00  Inactivo
+  [ 355] ARROZ MOROS Y CRISTIANOS NP*                  Precio:   195.00  Inactivo
+  [ 246] ARROZ PILAF                                   Precio:   410.00  Inactivo
+  [ 354] BISTEC DE CERDO GRILLE CON AJO Y CEBOLLA NP*  Precio:   980.00  Inactivo
+  [  68] BISTEC DE CERDO GRILLET CON AJO Y CEBOLLA     Precio:   975.00  Inactivo
+  [  69] BISTEC DE CERDO URUGUAYO                      Precio:  1350.00  Inactivo
+  [ 383] BISTEC DE CERDO URUGUAYO*                     Precio:  1520.00  Inactivo
+  [ 258] BISTEC DE POLLO A LA CORDON BLEU              Precio:  1360.00  Inactivo
+  [ 268] BISTEC DE POLLO AJO Y CEBOLLA*                Precio:   990.00  Inactivo
+  [ 361] BISTEC DE POLLO GRILLE NP                     Precio:   990.00  Inactivo
+  [  70] BISTEC DE POLLO GRILLET                       Precio:   975.00  Inactivo
+  [  71] BISTEC DE RES GRILLE                          Precio:   860.00  Inactivo
+  [  72] BONIATO FRITO                                 Precio:   500.00  Inactivo
+  [ 228] BONIATO HERVIDO                               Precio:   250.00  Inactivo
+  [ 272] CAMARONES AL AJILLO                           Precio:  2250.00  Inactivo
+  [ 273] CAMARONES REBOZADOS                           Precio:  2500.00  Inactivo
+  [ 271] CERDO ASADO                                   Precio:  1465.00  Inactivo
+  [ 440] CERVEZA                                       Precio:   400.00  Inactivo
+  [ 401] CHICHARRITA                                   Precio:   500.00  Inactivo
+  [  75] CHICHARRITAS DE PLATANO BURRO                 Precio:   515.00  Inactivo
+  [  76] CHILINDRON DE CARNERO                         Precio:  1455.00  Inactivo
+  [ 270] CHULETA DE CERDO AHUMADO                      Precio:  1190.00  Inactivo
+  [ 269] CHULETA DE CERDO NATURAL                      Precio:  1365.00  Inactivo
+  [ 262] COCTEL DE CAMARON                             Precio:  2000.00  Inactivo
+  [ 248] CROQUETAS FRITAS                              Precio:   315.00  Inactivo
+  [ 274] ENCHILADO DE CAMARONES                        Precio:  2000.00  Inactivo
+  [ 275] ENCHILADO DE LANGOSTA                         Precio:  2600.00  Inactivo
+  [ 259] ENERGIZANTE                                   Precio:   700.00  Inactivo
+  [ 416] ENSALADA DE AGUACATE                          Precio:   500.00  Inactivo
+  [ 263] ENSALADA DE ATUN                              Precio:   650.00  Inactivo
+  [ 254] ENSALADA DE COL                               Precio:   350.00  Inactivo
+  [ 310] ENSALADA DE PEPINO                            Precio:   350.00  Inactivo
+  [ 229] ENSALADA DE TOMATE                            Precio:   350.00  Inactivo
+  [ 439] ENSALADA DE TOMATE PEPINO Y COL               Precio:   350.00  Inactivo
+  [ 257] ENSALADA DE TOMATE Y COL                      Precio:   350.00  Inactivo
+  [ 435] ENSALADA DE TOMATE Y PEPINO                   Precio:   350.00  Inactivo
+  [ 249] ENSALADA FRIA                                 Precio:   240.00  Inactivo
+  [  77] ENSALADA MIXTA 500                            Precio:   500.00  Inactivo
+  [ 431] ENSALADA MIXTA ENE                            Precio:   350.00  Inactivo
+  [ 442] ENSALADA MIXTA FEB-MAR                        Precio:   350.00  Inactivo
+  [  78] ENSALADA TOMATE 500                           Precio:   500.00  Inactivo
+  [ 264] ENTREMES DE JAMON Y QUESO                     Precio:   625.00  Inactivo
+  [ 256] ESPAGUETIS A LA BOLOÑESA                      Precio:   865.00  Inactivo
+  [ 238] ESPAGUETIS A LA CARBONARA                     Precio:   970.00  Inactivo
+  [ 281] ESPAGUETIS CON ATUN                           Precio:   690.00  Inactivo
+  [ 358] ESPAGUETIS CON ATUN NP*                       Precio:  1215.00  Inactivo
+  [ 241] ESPAGUETIS CON BEICON                         Precio:   615.00  Inactivo
+  [ 280] ESPAGUETIS CON CAMARONES                      Precio:  1895.00  Inactivo
+  [ 311] ESPAGUETIS CON JAMON                          Precio:   575.00  Inactivo
+  [ 380] ESPAGUETIS CON JAMON Y QUESO - NP*            Precio:   785.00  Inactivo
+  [ 109] ESPAGUETIS CON JAMÓN Y QUESO                  Precio:   575.00  Inactivo
+  [ 357] ESPAGUETIS DE BACON NP*                       Precio:   715.00  Inactivo
+  [  95] ESPAGUETIS NAPOLITANO                         Precio:   440.00  Inactivo
+  [ 353] Espaguetis Napolitano NP*                     Precio:   590.00  Inactivo
+  [ 320] FAJITAS DE POLLO                              Precio:  1300.00  Inactivo
+  [ 245] FILETE DE CERDO                               Precio:  1130.00  Inactivo
+  [ 277] FILETE DE PESCADO CANCILLER                   Precio:  2095.00  Inactivo
+  [ 279] FILETE DE PESCADO EMPANADO                    Precio:  1915.00  Inactivo
+  [  79] FILETE DE PESCADO GRILLE                      Precio:   980.00  Inactivo
+  [  80] FRIJOLES NEGROS                               Precio:   500.00  Inactivo
+  [  81] FUFU DE PLATANO                               Precio:   250.00  Inactivo
+  [ 417] JUGO DE CAJA  200                             Precio:   200.00  Inactivo
+  [ 276] LANGOSTA AL AJILLO                            Precio:  2600.00  Inactivo
+  [ 234] LOMO DE CERDO                                 Precio:  1190.00  Inactivo
+  [ 253] LONJAS DE CERDO AHUMADO                       Precio:  1160.00  Inactivo
+  [ 221] MASAS FRITAS DE CERDO*                        Precio:  1070.00  Inactivo
+  [  91] MATAJIBARO                                    Precio:   470.00  Inactivo
+  [  93] PAELLA                                        Precio:  1790.00  Inactivo
+  [  94] PAPA FRITAS                                   Precio:   560.00  Inactivo
+  [ 101] PECHUGA DE POLLO A LA CORDON BLEU             Precio:  1315.00  Inactivo
+  [ 267] PECHUGA DE POLLO GRILLE                       Precio:  1095.00  Inactivo
+  [  96] PESCADO FRITO                                 Precio:  2090.00  Inactivo
+  [  97] PIERNA DE CERDO AZADA                         Precio:  1625.00  Inactivo
+  [ 322] PLATANO HERVIDO                               Precio:   250.00  Inactivo
+  [  99] PLATANO MADURO FRITO                          Precio:   500.00  Inactivo
+  [ 237] POLLO EN SALSA                                Precio:   950.00  Inactivo
+  [ 100] POLLO FRITO                                   Precio:   990.00  Inactivo
+  [ 286] POTE CON HELADO                               Precio:  1200.00  Inactivo
+  [ 225] POZUELO                                       Precio:    90.00  Inactivo
+  [ 242] PURE DE MALANGA                               Precio:   560.00  Inactivo
+  [ 285] PURE DE PAPA                                  Precio:   565.00  Inactivo
+  [ 104] REFRESCO DE LATA 300                          Precio:   300.00  Inactivo
+  [ 105] ROPA VIEJA CON CARNE DE RES                   Precio:   920.00  Inactivo
+  [ 266] SOPA DE MARISCOS                              Precio:  1935.00  Inactivo
+  [ 106] SOPA DE PESCADO                               Precio:   460.00  Inactivo
+  [ 107] SOPA DE POLLO                                 Precio:   440.00  Inactivo
+  [ 379] SOPA DE POLLO - NP*                           Precio:   460.00  Inactivo
+  [ 360] SOPA DE POLLO NP                              Precio:   460.00  Inactivo
+  [ 232] SOPA DE RES                                   Precio:   460.00  Inactivo
+  [ 108] SOPA DE VEGETALES                             Precio:   445.00  Inactivo
+  [ 278] SPERLAN DE PESCADO                            Precio:  1960.00  Inactivo
+  [ 110] TAMAL EN HOJAS                                Precio:   550.00  Inactivo
+  [ 247] TOSTONES NATURALES 475                        Precio:   475.00  Inactivo
+  [ 111] TOSTONES NATURALES*                           Precio:   500.00  Inactivo
+  [ 284] TOSTONES RELLENOS CON ATUN                    Precio:  1365.00  Inactivo
+  [ 239] TOSTONES RELLENOS CON BEICON                  Precio:   475.00  Inactivo
+  [ 283] TOSTONES RELLENOS CON CAMARON                 Precio:  1275.00  Inactivo
+  [ 308] TOSTONES RELLENOS CON JAMON                   Precio:   475.00  Inactivo
+  [ 112] TOSTONES RELLENOS CON JAMON Y QUESO           Precio:   790.00  Inactivo
+  [ 309] TOSTONES RELLENOS CON QUESO                   Precio:   475.00  Inactivo
+  [ 255] VEGETALES SALTEADOS                           Precio:   570.00  Inactivo
+  [ 113] YUCA CON MOJO                                 Precio:   500.00  Inactivo
+
+--- OTRO ---
+  [ 384] CHAROLA                                       Precio:   300.00  Inactivo
+  [  82] JABA                                          Precio:    20.00  Inactivo
+  [ 102] POZUELO                                       Precio:   250.00  Inactivo
+
+--- POSTRE ---
+  [ 222] CAKE CON HELADO                               Precio:   590.00  Inactivo
+  [ 251] CASQUITO CON GUAYABA                          Precio:   480.00  Inactivo
+  [ 314] COPA DE HELADO 350                            Precio:   350.00  Inactivo
+  [ 233] COPA DE HELADO*                               Precio:   500.00  Inactivo
+  [ 287] COPA LOLITA                                   Precio:   690.00  Inactivo
+  [ 261] CUÑA DE CAKE                                  Precio:   300.00  Inactivo
+  [ 386] DULCE DE FRUTABOMBA                           Precio:   480.00  Inactivo
+  [ 436] HELADO                                        Precio:   500.00  Inactivo
+  [ 288] NATILLA                                       Precio:   260.00  Inactivo
+  [ 103] PUDIN DIPLOMATICO                             Precio:   390.00  Inactivo
+
+--- TRAGO ---
+  [ 324] CAFE CORTADO                                  Precio:   150.00  Inactivo
+  [  73] CAFE EXPRESO                                  Precio:   250.00  Inactivo
+  [ 352] CAFE FRAPUCCINO                               Precio:   350.00  Inactivo
+  [ 335] COPA DE VINO GAMA ALTA                        Precio:  1000.00  Inactivo
+  [ 409] COPA DE VINO GAMA BAJA                        Precio:   600.00  Inactivo
+  [ 408] COPA DE VINO GAMA MEDIA                       Precio:   740.00  Inactivo
+  [ 319] TRAGO HABANA CLUB 7 AÑOS                      Precio:   500.00  Inactivo
+  [ 226] TRAGO HABANA CLUB ESPECIAL                    Precio:   400.00  Inactivo
+  [ 316] TRAGO HABANA CLUB PRODUNDO                    Precio:   500.00  Inactivo
+  [ 315] TRAGO RON                                     Precio:   500.00  Inactivo
+  [ 313] TRAGO SANTIAGO 11 AÑOS                        Precio:  1500.00  Inactivo

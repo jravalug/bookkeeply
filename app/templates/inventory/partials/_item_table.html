@@ -1,0 +1,64 @@
+<section class="bg-gray-100 py-12 dark:bg-gray-800">
+  <div class="container mx-auto px-4">
+    <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">
+      Listado de Articulos de Inventario
+    </h3>
+    <div class="overflow-x-auto relative">
+      <table
+        id="products-table"
+        class="w-full text-sm text-left text-gray-500 dark:text-gray-400"
+      >
+        <thead
+          class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400"
+        >
+          <tr>
+            <th scope="col" class="py-3 px-6">ID</th>
+            <th scope="col" class="py-3 px-6">Nombre</th>
+            <th scope="col" class="py-3 px-6">Unidad</th>
+            <th scope="col" class="py-3 px-6">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inventory_item in inventory_items %}
+            <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+              <td class="py-4 px-6">{{ inventory_item.id }}</td>
+              <td class="py-4 px-6">{{ inventory_item.name }}</td>
+              <td class="py-4 px-6">( {{ inventory_item.unit }} )</td>
+              <td class="py-4 px-6">
+                <form
+                  method="post"
+                  action="{{ url_for('inventory.item_update', client_slug=business.client.slug, business_slug=business.slug, inventory_item_id=inventory_item.id) }}"
+                  hx-post="{{ url_for('inventory.item_update', client_slug=business.client.slug, business_slug=business.slug, inventory_item_id=inventory_item.id) }}"
+                  hx-target="#inventory-items-panel"
+                  hx-swap="outerHTML"
+                  class="flex space-x-2"
+                >
+                  <input
+                    type="text"
+                    name="name"
+                    value="{{ inventory_item.name }}"
+                    required
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-32 p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                  />
+                  <input
+                    type="text"
+                    name="unit"
+                    value="{{ inventory_item.unit }}"
+                    required
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-20 p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                  />
+                  <button
+                    type="submit"
+                    class="text-white bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-3 py-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+                  >
+                    Actualizar
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

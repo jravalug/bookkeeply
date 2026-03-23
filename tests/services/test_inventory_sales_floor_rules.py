@@ -40,6 +40,12 @@ class TestInventorySalesFloorRules(unittest.TestCase):
         fake_stock = SimpleNamespace(current_quantity=1.5)
 
         with patch(
+            "app.services.inventory_service.InventoryService._resolve_business_inventory_flows",
+            return_value=(True, False),
+        ), patch(
+            "app.services.inventory_service.InventoryService._get_item_or_404",
+            return_value=SimpleNamespace(usage_type="mixed"),
+        ), patch(
             "app.services.inventory_service.InventoryService.create_movement",
             return_value=fake_movement,
         ) as create_movement_mock, patch(

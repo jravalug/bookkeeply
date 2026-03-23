@@ -1,8 +1,9 @@
 from pathlib import Path
 import sys
 import unittest
+from datetime import date
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -81,6 +82,55 @@ class TestInventoryWipRoutes(unittest.TestCase):
             business_id=16,
             wip_balance_id=30,
             can_be_subproduct=True,
+        )
+
+    def test_wip_create_accepts_expiration_date(self):
+        fake_business = SimpleNamespace(id=18)
+        fake_balance = SimpleNamespace(
+            id=41,
+            inventory_item_id=7,
+            quantity=3.0,
+            remaining_quantity=3.0,
+            unit="kg",
+            status="open",
+            can_be_subproduct=False,
+            finished_location="finished_goods",
+            expiration_date=date(2026, 5, 30),
+            expiration_source="manual",
+        )
+
+        with patch(
+            "app.routes.inventory.inventory_service.resolve_business",
+            return_value=fake_business,
+        ), patch(
+            "app.routes.inventory.inventory_service.create_wip_balance",
+            return_value=fake_balance,
+        ) as create_mock:
+            response = self.client.post(
+                "/clients/cliente-demo/business/negocio-demo/inventory/wip/create",
+                json={
+                    "inventory_item_id": 7,
+                    "quantity": 3,
+                    "unit": "kg",
+                    "account_code": "7101",
+                    "expiration_date": "2026-05-30",
+                },
+            )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["item"]["expiration_source"], "manual")
+        create_mock.assert_called_once_with(
+            business_id=18,
+            inventory_item_id=7,
+            quantity=3.0,
+            unit="kg",
+            account_code="7101",
+            source_inventory_id=None,
+            expiration_date=ANY,
+            can_be_subproduct=False,
+            notes=None,
         )
 
 
