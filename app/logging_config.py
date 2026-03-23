@@ -12,7 +12,7 @@ def setup_logging(app):
     log_dir = Path(app.config.get("LOG_DIR", Path(app.root_path).parents[0] / "logs"))
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    log_file = log_dir / app.config.get("LOG_FILE", "salemanager.log")
+    log_file = log_dir / app.config.get("LOG_FILE", "bookkeeply.log")
     max_bytes = int(app.config.get("LOG_MAX_BYTES", 5 * 1024 * 1024))
     backup_count = int(app.config.get("LOG_BACKUP_COUNT", 5))
 
@@ -25,13 +25,13 @@ def setup_logging(app):
     root_logger.setLevel(log_level)
 
     if not any(
-        getattr(handler, "name", "") == "salemanager_console"
+        getattr(handler, "name", "") == "bookkeeply_console"
         for handler in root_logger.handlers
     ):
         console_handler = logging.StreamHandler()
         console_handler.setLevel(log_level)
         console_handler.setFormatter(formatter)
-        console_handler.name = "salemanager_console"
+        console_handler.name = "bookkeeply_console"
         root_logger.addHandler(console_handler)
 
     log_file_abs = str(log_file.resolve())

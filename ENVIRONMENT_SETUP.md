@@ -161,7 +161,7 @@ python run.py
 
 ```bash
 export FLASK_ENV=staging
-export DATABASE_URL=postgresql://user:pass@localhost/salemanager_staging
+export DATABASE_URL=postgresql://user:pass@localhost/bookkeeply_staging
 export SECRET_KEY=staging-secret-key-123
 export REDIS_URL=redis://localhost:6379/0
 
@@ -173,9 +173,9 @@ python run.py
 Usa systemd/supervisord en servidor:
 
 ```ini
-[program:salemanager]
+[program:bookkeeply]
 command=/path/to/venv/bin/gunicorn -w 4 -b 0.0.0.0:5000 run:app
-directory=/path/to/salemanager
+directory=/path/to/bookkeeply
 environment=FLASK_ENV=production,DATABASE_URL=...,SECRET_KEY=...
 autostart=true
 autorestart=true
@@ -261,7 +261,7 @@ echo $SECRET_KEY
 ### "DATABASE_URL must be set in staging/production"
 
 ```bash
-export DATABASE_URL=postgresql://user:password@localhost:5432/salemanager
+export DATABASE_URL=postgresql://user:password@localhost:5432/bookkeeply
 ```
 
 ### Redis connection refused
@@ -279,7 +279,7 @@ docker run -d -p 6379:6379 redis:latest
 ```bash
 # Asegúrate de estar en el directorio raíz del proyecto
 pwd
-# Output: /home/jravalug/devcode/salemanager
+# Output: /home/jravalug/devcode/bookkeeply
 
 # Verifica que el archivo existe
 ls -la .env.local

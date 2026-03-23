@@ -1,7 +1,7 @@
 #!/usr/bin/env fish
 
 
-cd /home/jravalug/devcode/salemanager && conda run -n webdev python -c "
+cd /home/jravalug/devcode/bookkeeply && conda run -n webdev python -c "
 import sqlite3
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side

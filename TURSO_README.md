@@ -1,4 +1,4 @@
-# Turso Integration for SaleManager
+# Turso Integration for Bookkeeply
 
 Este proyecto utiliza **Turso** con **Embedded Replicas** para desarrollo, proporcionando una experiencia de base de datos distribuida con funcionamiento offline-first puro.
 

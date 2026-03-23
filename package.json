@@ -1,5 +1,5 @@
 {
-  "name": "salemanager",
+  "name": "bookkeeply",
   "version": "1.0.0",
   "description": "This project is a Flask application designed to manage business sales efficiently. It allows users to create, view, and update sales, as well as manage products.",
   "main": "index.js",
@@ -9,15 +9,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jravalug/salemanager.git"
+    "url": "git+https://github.com/jravalug/bookkeeply.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/jravalug/salemanager/issues"
+    "url": "https://github.com/jravalug/bookkeeply/issues"
   },
-  "homepage": "https://github.com/jravalug/salemanager#readme",
+  "homepage": "https://github.com/jravalug/bookkeeply#readme",
   "devDependencies": {
     "prettier-plugin-jinja-template": "^2.0.0",
     "tailwindcss": "^4.0.0"

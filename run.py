@@ -17,7 +17,7 @@ def _get_port(default=5050):
 def _get_debug(default=True):
     raw_debug = os.environ.get("FLASK_DEBUG")
     if raw_debug is None:
-        return os.environ.get("FLASK_ENV", "development") == "development"
+        return os.environ.get("FLASK_ENV", "dev") == "dev"
     return raw_debug.strip().lower() in {"1", "true", "yes", "on"}
 
 

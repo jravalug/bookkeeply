@@ -23,11 +23,6 @@ from .routes.api import register_api_blueprints
 # Configurar logging
 logger = logging.getLogger(__name__)
 
-# Constantes
-LIBSQL_DIALECT_NAME = "libsql"
-LIBSQL_MODULE = "sqlalchemy_libsql"
-LIBSQL_DIALECT_CLASS = "SQLiteDialect_libsql"
-
 
 def create_app(env=None):
     """
@@ -68,10 +63,10 @@ def create_app(env=None):
 
 def _load_environment_config(env):
     """Load environment variables from .env files for development/testing."""
-    effective_env = env or os.environ.get("FLASK_ENV", "development")
+    effective_env = env or os.environ.get("FLASK_ENV", "dev")
     project_root = Path(__file__).resolve().parents[1]
 
-    if effective_env in ("development", "testing"):
+    if effective_env in ("dev", "test"):
         env_local = project_root / ".env.local"
         env_default = project_root / ".env"
 
@@ -93,34 +88,11 @@ def _configure_app(app, env):
 
 
 def _setup_database(app, config_instance):
-    """Initialize database extensions and register libsql dialect if needed."""
-    # Register libsql dialect for Turso connections
-    if LIBSQL_DIALECT_NAME in str(config_instance.SQLALCHEMY_DATABASE_URI):
-        _register_libsql_dialect()
-
+    """Initialize database extensions."""
     # Initialize database extensions
     db.init_app(app)
     migrate.init_app(app, db)
     logger.info("Database extensions initialized")
-
-
-def _register_libsql_dialect():
-    """Register the libsql dialect for SQLAlchemy."""
-    try:
-        import sqlalchemy_libsql
-        from sqlalchemy.dialects import registry
-
-        registry.register(LIBSQL_DIALECT_NAME, LIBSQL_MODULE, LIBSQL_DIALECT_CLASS)
-        logger.info("🔧 Registered libsql dialect for Turso connections")
-    except ImportError as e:
-        logger.error(
-            f"❌ Failed to register libsql dialect: {LIBSQL_MODULE} not installed. "
-            f"Error: {e}"
-        )
-        raise RuntimeError(
-            f"sqlalchemy-libsql is required for Turso connections. "
-            f"Please install it with: pip install sqlalchemy-libsql"
-        ) from e
 
 
 def _register_template_components(app):

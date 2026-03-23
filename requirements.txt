@@ -10,5 +10,4 @@ Flask-Migrate~=4.1.0
 alembic~=1.14.1
 python-dotenv~=1.0.0
 Flask-SQLAlchemy~=3.0.0
-sqlalchemy-libsql~=0.2.0
-libsql~=0.1.11
+psycopg[binary]~=3.2.6

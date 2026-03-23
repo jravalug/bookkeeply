@@ -23,7 +23,7 @@
       "driver": "sqlite",
       "color": "#00A6FF",
       "connectionType": "socket",
-      "socket": "salemanager/instance/bookkeeply.db",
+      "socket": "bookkeeply/instance/bookkeeply.db",
       "readOnly": false,
       "role": "development",
       "postConnectionSqlType": "inline",
