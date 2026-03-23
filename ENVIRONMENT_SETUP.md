@@ -48,6 +48,17 @@ config.py
 
 ## Configuración Inicial
 
+### Entorno Python recomendado para este proyecto
+
+- Este proyecto usa **conda** y no `.venv`.
+- Nombre de entorno estándar: `bookkeeply`.
+
+```bash
+conda create -y -n bookkeeply python=3.12
+conda activate bookkeeply
+pip install -r requirements.txt
+```
+
 ### 1. Crear archivo .env.local
 
 ```bash

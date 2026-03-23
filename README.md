@@ -55,11 +55,11 @@ git clone https://github.com/tu-usuario/tu-proyecto.git
 cd tu-proyecto
 ```
 
-### 2. Crear y Activar un Entorno Virtual
+### 2. Crear y Activar el Entorno Conda del Proyecto
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
+conda create -y -n bookkeeply python=3.12
+conda activate bookkeeply
 ```
 
 ### 3. Instalar Dependencias de Python

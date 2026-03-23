@@ -16,6 +16,8 @@
   "github.copilot.chat.localeOverride": "es",
   "python-envs.defaultEnvManager": "ms-python.python:conda",
   "python-envs.defaultPackageManager": "ms-python.python:conda",
+  "python.defaultInterpreterPath": "/home/jravalug/anaconda3/envs/bookkeeply/bin/python",
+  "python.terminal.activateEnvironment": true,
   "dbcode.connections": [
     {
       "connectionId": "xqUmk2GoHUC1_I3x1WENs",
