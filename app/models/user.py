@@ -44,7 +44,9 @@ class User(db.Model):
     username = db.Column(db.String(64), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.Enum(UserRole), default=UserRole.USER, nullable=False)
+    role = db.Column(
+        db.Enum(UserRole, name="user_role_enum"), default=UserRole.USER, nullable=False
+    )
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
     last_login_at = db.Column(db.DateTime)
